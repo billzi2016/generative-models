@@ -28,7 +28,15 @@ runs/
 outputs/
 checkpoints/
 wandb/
+vae/runs/
+ddpm/runs/
+dit/runs/
+flow_matching/runs/
+gan/runs/
 
 # Local data artifacts
 dataset/raw/*
 !dataset/raw/README.md
+dataset/latents/
+*.h5
+*.hdf5

@@ -116,11 +116,17 @@ vae/runs/vae_daf/
 主要文件：
 
 - `best_diffusers/`：验证集 loss 最优的 Diffusers VAE，后续优先用 `AutoencoderKL.from_pretrained()` 读取。
-- `last_diffusers/`：最后一轮 Diffusers VAE。
-- `best.pt`：优化器、scheduler、指标等训练状态。
-- `last.pt`：最后一轮训练状态。
+- `last_diffusers/`：最后一轮 Diffusers VAE，需要显式传入 `--save-last` 才保存。
+- `best.pt`：优化器、scheduler、指标等训练状态，需要显式传入 `--save-training-state` 才保存。
+- `last.pt`：最后一轮训练状态，需要显式传入 `--save-training-state` 才保存。
 - `config.json`：本次训练配置。
 - `reconstruction_epoch_*.png`：原图和重建图对比，用于检查 VAE 质量。
+
+更完整的数据处理、train/val、checkpoint 和 latent 缓存策略见：
+
+```text
+vae/dataset_treatment.md
+```
 
 ## Latent 插值 GIF
 

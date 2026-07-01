@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -50,6 +51,10 @@ class TrainConfig:
     seed: int
     patience: int
     min_delta: float
+    save_last: bool
+    save_training_state: bool
+    checkpoint_every_epochs: int
+    max_epoch_checkpoints: int
 
 
 class EarlyStopping:
@@ -95,6 +100,10 @@ def parse_args() -> TrainConfig:
     parser.add_argument("--seed", type=int, default=42, help="随机种子")
     parser.add_argument("--patience", type=int, default=8, help="早停等待轮数")
     parser.add_argument("--min-delta", type=float, default=1e-4, help="判定验证 loss 改善的最小幅度")
+    parser.add_argument("--save-last", action="store_true", help="额外保存 last_diffusers；默认只强制保存 best_diffusers")
+    parser.add_argument("--save-training-state", action="store_true", help="保存 optimizer/scheduler 状态 .pt；体积较大，默认关闭")
+    parser.add_argument("--checkpoint-every-epochs", type=int, default=0, help="每隔多少个 epoch 保存一个 Diffusers checkpoint；0 表示不保存周期点")
+    parser.add_argument("--max-epoch-checkpoints", type=int, default=10, help="最多保留多少个周期 checkpoint，避免占满 SSD")
     args = parser.parse_args()
     return TrainConfig(**vars(args))
 
@@ -261,6 +270,26 @@ def save_checkpoint(
     )
 
 
+def save_diffusers_model(model: nn.Module, path: Path) -> None:
+    """以 Diffusers 原生格式保存 VAE，并优先使用 safetensors，减少损坏风险。"""
+    model.save_pretrained(path, safe_serialization=True)
+
+
+def prune_epoch_checkpoints(output_dir: Path, max_checkpoints: int) -> None:
+    """
+    限制周期 checkpoint 数量。
+
+    只删除命名为 epoch_XXXX_diffusers 的目录，避免误删 best_diffusers 或用户手动保存的目录。
+    """
+    if max_checkpoints <= 0:
+        return
+
+    checkpoints = sorted(output_dir.glob("epoch_*_diffusers"))
+    extra_count = len(checkpoints) - max_checkpoints
+    for checkpoint_dir in checkpoints[:max(0, extra_count)]:
+        shutil.rmtree(checkpoint_dir)
+
+
 def main() -> None:
     """训练主流程。"""
     config = parse_args()
@@ -306,13 +335,21 @@ def main() -> None:
         }
         print(json.dumps({"epoch": epoch, **metrics}, ensure_ascii=False, indent=2))
 
-        save_checkpoint(output_dir / "last.pt", model, optimizer, scheduler, config, epoch, metrics)
-        model.save_pretrained(output_dir / "last_diffusers")
+        if config.save_training_state:
+            save_checkpoint(output_dir / "last.pt", model, optimizer, scheduler, config, epoch, metrics)
+
+        if config.save_last:
+            save_diffusers_model(model, output_dir / "last_diffusers")
+
+        if config.checkpoint_every_epochs > 0 and epoch % config.checkpoint_every_epochs == 0:
+            save_diffusers_model(model, output_dir / f"epoch_{epoch:04d}_diffusers")
+            prune_epoch_checkpoints(output_dir, config.max_epoch_checkpoints)
 
         if val_metrics["loss"] < best_val_loss:
             best_val_loss = val_metrics["loss"]
-            save_checkpoint(output_dir / "best.pt", model, optimizer, scheduler, config, epoch, metrics)
-            model.save_pretrained(output_dir / "best_diffusers")
+            if config.save_training_state:
+                save_checkpoint(output_dir / "best.pt", model, optimizer, scheduler, config, epoch, metrics)
+            save_diffusers_model(model, output_dir / "best_diffusers")
             save_reconstruction_samples(model, val_loader, device, output_dir / f"reconstruction_epoch_{epoch:03d}.png")
 
         if early_stopping.step(val_metrics["loss"]):
