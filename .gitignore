@@ -28,6 +28,12 @@ runs/
 outputs/
 checkpoints/
 wandb/
+samples/
+generated/
+*.ckpt
+*.pt
+*.pth
+*.safetensors
 vae/runs/
 ddpm/runs/
 dit/runs/
@@ -40,3 +46,7 @@ dataset/raw/*
 dataset/latents/
 *.h5
 *.hdf5
+
+# Test temporary artifacts
+test/tmp/
+test/outputs/

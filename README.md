@@ -114,6 +114,180 @@ latent shape = [batch, 4, 16, 16]
 - 复用同一个 decoder，采样结果都能还原到同一图片空间。
 - 更接近 Stable Diffusion 的工程结构。
 
+## 推荐运行顺序
+
+### 1. 准备 VAE
+
+默认使用 Diffusers `AutoencoderKL`。如果直接使用预训练 VAE，可以先跳过微调；如果要在 DAF 上微调：
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/raw/fullMin256 \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
+```
+
+训练后应得到：
+
+```text
+vae/runs/vae_daf/best_diffusers
+```
+
+默认只强制保存 `best_diffusers/`，不会无限保存 checkpoint。更细节见：
+
+```text
+vae/dataset_treatment.md
+```
+
+### 2. 缓存全量 latent
+
+VAE best 确定后，把全量图片 encode 成单个 HDF5 文件：
+
+```bash
+python vae/cache_latents.py
+```
+
+输出：
+
+```text
+dataset/latents/vae_daf_128_best.h5
+```
+
+HDF5 中保存的是乘过 `vae.config.scaling_factor` 的 `float16` latent，默认 gzip 压缩等级为 `1`。
+
+### 3. 训练不同 latent generator
+
+```bash
+python ddpm/train.py
+python dit/train.py
+python flow_matching/train.py
+python gan/train.py
+```
+
+各方法默认读取：
+
+```text
+dataset/latents/vae_daf_128_best.h5
+```
+
+### 4. 采样生成图片
+
+```bash
+python ddpm/sample.py
+python dit/sample.py
+python flow_matching/sample.py
+python gan/sample.py
+```
+
+说明：
+
+- 后续方法默认不重复读取原图，也不重复运行 VAE encoder。
+- 后续方法默认读取同一个 HDF5 latent 缓存。
+- 各方法的 `runs/` 输出都被 `.gitignore` 忽略。
+
+## 各方法训练与生成
+
+### DDPM
+
+训练：
+
+```bash
+python ddpm/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
+  --output-dir ddpm/runs/latent_ddpm
+```
+
+生成：
+
+```bash
+python ddpm/sample.py \
+  --model-dir ddpm/runs/latent_ddpm/best_model \
+  --vae-dir vae/runs/vae_daf/best_diffusers \
+  --output ddpm/runs/latent_ddpm/samples.png
+```
+
+### DiT
+
+训练：
+
+```bash
+python dit/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
+  --output-dir dit/runs/latent_dit
+```
+
+生成：
+
+```bash
+python dit/sample.py \
+  --model-dir dit/runs/latent_dit/best_model \
+  --vae-dir vae/runs/vae_daf/best_diffusers \
+  --output dit/runs/latent_dit/samples.png
+```
+
+### Flow Matching
+
+训练：
+
+```bash
+python flow_matching/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
+  --output-dir flow_matching/runs/latent_fm
+```
+
+生成：
+
+```bash
+python flow_matching/sample.py \
+  --model-dir flow_matching/runs/latent_fm/best_model \
+  --vae-dir vae/runs/vae_daf/best_diffusers \
+  --output flow_matching/runs/latent_fm/samples.png
+```
+
+### GAN
+
+训练：
+
+```bash
+python gan/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
+  --output-dir gan/runs/latent_gan
+```
+
+生成：
+
+```bash
+python gan/sample.py \
+  --checkpoint gan/runs/latent_gan/best.pt \
+  --vae-dir vae/runs/vae_daf/best_diffusers \
+  --output gan/runs/latent_gan/samples.png
+```
+
+## 测试
+
+测试脚本放在：
+
+```text
+test/
+```
+
+运行：
+
+```bash
+python -m unittest discover -s test -p "test_*.py"
+```
+
+或者：
+
+```bash
+bash test/run_dry_tests.sh
+```
+
+这些测试只做语法、模型前向、HDF5 小样本读写和 dry-run 级验证，不运行真实训练，不写大 checkpoint。
+
 ## VAE 插值
 
 VAE 本身也可以做两张图之间的平滑过渡，不需要 DDPM 或 diffusion：

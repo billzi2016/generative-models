@@ -5,3 +5,4 @@ tqdm
 diffusers
 accelerate
 safetensors
+h5py
