@@ -49,21 +49,25 @@ images = vae.decode(latents / vae.config.scaling_factor).sample
 
 ## 数据路径
 
-当前 `DAF` 数据包仍在下载和确认内部结构。已观察到压缩包前部包含类似路径：
+当前 `DAF` 数据已经解压在：
 
 ```text
-daf/fullMin256/0192/79192.jpg
+dataset/raw/
 ```
 
-因此第一版训练代码不硬编码具体子目录，而是对 `--data-dir` 做递归图片扫描。
-
-建议后续解压到：
+当前实际图片目录为：
 
 ```text
-dataset/extracted/daf/fullMin256
+dataset/raw/fullMin256
 ```
 
-如果实际解压目录不同，训练时显式传入即可：
+VAE 训练脚本默认直接使用这个目录。目录内图片按子目录分桶，例如：
+
+```text
+dataset/raw/fullMin256/0192/79192.jpg
+```
+
+如果后续换了数据目录，训练时显式传入即可：
 
 ```bash
 python vae/train_vae.py --data-dir 实际图片目录
@@ -73,7 +77,7 @@ python vae/train_vae.py --data-dir 实际图片目录
 
 ```bash
 python vae/train_vae.py \
-  --data-dir dataset/extracted/daf/fullMin256 \
+  --data-dir dataset/raw/fullMin256 \
   --image-size 128 \
   --batch-size 64 \
   --epochs 50
@@ -89,7 +93,7 @@ stabilityai/sd-vae-ft-mse
 
 ```bash
 python vae/train_vae.py \
-  --data-dir dataset/extracted/daf/fullMin256 \
+  --data-dir dataset/raw/fullMin256 \
   --pretrained-vae 本地vae目录
 ```
 
@@ -97,7 +101,7 @@ python vae/train_vae.py \
 
 ```bash
 python vae/train_vae.py \
-  --data-dir dataset/extracted/daf/fullMin256 \
+  --data-dir dataset/raw/fullMin256 \
   --init-from-scratch
 ```
 
@@ -117,3 +121,31 @@ vae/runs/vae_daf/
 - `last.pt`：最后一轮训练状态。
 - `config.json`：本次训练配置。
 - `reconstruction_epoch_*.png`：原图和重建图对比，用于检查 VAE 质量。
+
+## Latent 插值 GIF
+
+VAE 可以直接做两张图之间的平滑过渡，不需要 DDPM / diffusion。
+
+流程：
+
+```text
+image A -> VAE encoder -> latent A
+image B -> VAE encoder -> latent B
+latent A/B 插值
+插值 latent -> VAE decoder -> GIF 帧
+```
+
+运行示例：
+
+```bash
+python vae/interpolate_gif.py \
+  --image-a path/to/a.jpg \
+  --image-b path/to/b.jpg \
+  --output vae/runs/interpolation.gif
+```
+
+默认会使用 `MPS`，输出 latent 形状应为：
+
+```text
+[1, 4, 16, 16]
+```

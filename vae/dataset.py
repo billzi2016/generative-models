@@ -5,8 +5,8 @@ VAE 数据集读取模块。
 它位于整体训练流程的第一步：原始图片 -> VAE encoder -> latent。
 
 设计原则：
-- 不假设 DAF 压缩包内部一定保持固定目录名。
-- 递归扫描图片文件，适配 dataset/extracted/daf/fullMin256 这类多级目录。
+- 默认匹配当前仓库中的 dataset/raw/fullMin256。
+- 递归扫描图片文件，适配 DAF 这种按子目录分桶存放图片的结构。
 - 在训练阶段统一 resize 到指定分辨率，并归一化到 [-1, 1]，方便 VAE decoder 使用 Tanh 输出。
 """
 

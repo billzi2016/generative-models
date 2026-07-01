@@ -30,4 +30,5 @@ checkpoints/
 wandb/
 
 # Local data artifacts
-dataset/raw/
+dataset/raw/*
+!dataset/raw/README.md

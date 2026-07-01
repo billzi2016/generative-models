@@ -101,6 +101,7 @@
 
 - 模型类：`diffusers.AutoencoderKL`
 - 默认权重：`stabilityai/sd-vae-ft-mse`
+- 默认数据目录：`dataset/raw/fullMin256`
 - 输入范围：`[-1, 1]`
 - 输入形状：`[batch, 3, 128, 128]`
 - latent 形状：`[batch, 4, 16, 16]`

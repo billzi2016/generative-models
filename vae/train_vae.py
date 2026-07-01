@@ -6,8 +6,8 @@ VAE 训练入口。
 2. 使用 Diffusers AutoencoderKL 把图片压缩到 SD 风格空间 latent map。
 3. 保存 Diffusers 格式 checkpoint，供后续 latent diffusion / stable_diffusion 模块复用。
 
-默认数据目录先指向 dataset/extracted/daf/fullMin256。由于 daf.tar.gz 仍在下载且
-内部路径可能继续确认，实际训练时可以通过 --data-dir 显式指定图片目录。
+默认数据目录直接匹配当前仓库中的 DAF 解压结构：dataset/raw/fullMin256。
+实际训练时仍可以通过 --data-dir 显式指定其他图片目录。
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ class EarlyStopping:
 def parse_args() -> TrainConfig:
     """解析命令行参数，并转换成训练配置对象。"""
     parser = argparse.ArgumentParser(description="训练动漫头像 VAE")
-    parser.add_argument("--data-dir", default="dataset/extracted/daf/fullMin256", help="已解压图片目录")
+    parser.add_argument("--data-dir", default="dataset/raw/fullMin256", help="DAF 已解压图片目录")
     parser.add_argument("--output-dir", default="vae/runs/vae_daf", help="checkpoint 和样例图输出目录")
     parser.add_argument("--pretrained-vae", default=DEFAULT_PRETRAINED_VAE, help="Diffusers VAE 权重名或本地目录")
     parser.add_argument("--init-from-scratch", action="store_true", help="不用预训练权重，仅用 Diffusers AutoencoderKL 架构从零训练")
