@@ -10,7 +10,7 @@
 - 默认加载预训练 `stabilityai/sd-vae-ft-mse`。
 - 如确实要适配 DAF 数据，也用 Diffusers `AutoencoderKL` 微调，不再维护自定义 VAE。
 - 输出 Diffusers 原生格式的 `encoder / decoder` checkpoint。
-- 后续 `stable_diffusion/` 中的 latent diffusion 训练将使用这里的 `encoder` 产生空间 latent map，并使用 `decoder` 将 latent map 解码回图像。
+- 后续 `ddpm/`、`dit/`、`flow_matching/` 等目录中的 latent 生成模型将使用这里的 `encoder` 产生空间 latent map，并使用 `decoder` 将生成 latent 解码回图像。
 
 ## Latent 形状
 

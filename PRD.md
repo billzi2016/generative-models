@@ -36,7 +36,6 @@
 3. `DDPM`
 4. `Flow Matching`
 5. `DiT`
-6. `Stable Diffusion`
 
 ## 总体方法判断
 
@@ -72,20 +71,15 @@
 - 但对小数据、小算力场景不一定是第一优先级
 - 在本仓库中先作为规划对象，不作为第一实现顺序
 
-### Stable Diffusion
-
-- 当前主路线
-- 目标不是完整复刻工业级 SD，而是做一个小型、可训练、可解释、结构清晰的流程版本
-
-## Stable Diffusion 主路线
+## Stable Diffusion 风格主路线
 
 本仓库后续优先采用如下流程：
 
 1. 准备动漫头像数据集
 2. 使用预训练或微调后的 Diffusers `AutoencoderKL`
 3. 将 `128x128` 图像映射到 `4x16x16` latent 空间
-4. 在 latent 空间训练扩散模型
-5. 用 `VAE decoder` 将生成的 latent 解码回图像
+4. 分别在 latent 空间训练 `DDPM`、`DiT`、`Flow Matching` 等生成模型
+5. 各方法采样得到生成 latent 后，统一用 `VAE decoder` 解码回图像
 
 ## 为什么先确定 VAE
 
@@ -161,7 +155,6 @@ gan/
 ddpm/
 flow_matching/
 dit/
-stable_diffusion/
 ```
 
 ## 计划中的职责划分
@@ -177,17 +170,12 @@ stable_diffusion/
 - 放 `VAE` 训练与重建实验
 - 作为 `Stable Diffusion` 前置模块
 
-### stable_diffusion/
-
-- 放 latent diffusion 主流程实现
-- 后续依赖 `vae/` 产出的 encoder / decoder
-
 ### 其他方法目录
 
 - `gan/`：经典生成基线
-- `ddpm/`：扩散基线
-- `flow_matching/`：连续时间路线
-- `dit/`：transformer diffusion 路线
+- `ddpm/`：VAE latent 空间上的扩散基线
+- `flow_matching/`：VAE latent 空间上的连续时间路线
+- `dit/`：VAE latent 空间上的 transformer diffusion 路线
 
 ## 实现约束
 
@@ -200,7 +188,7 @@ stable_diffusion/
 
 当前优先库：
 
-- `diffusers`：`AutoencoderKL`、`UNet2DModel`、scheduler、后续 pipeline 组件
+- `diffusers`：`AutoencoderKL`、`UNet2DModel`、scheduler 等成熟组件
 - `accelerate`：后续训练加速、设备管理和混合精度能力
 - `torchvision`：图片读取、基础 transform、样例图保存
 - `PyTorch` 原生组件：optimizer、scheduler、DataLoader
@@ -255,7 +243,7 @@ stable_diffusion/
 
 当前仓库后续主线不是“所有方法同时开工”，而是：
 
-1. 先完成 `Stable Diffusion` 方向规划
+1. 先完成 `Stable Diffusion` 风格 latent 生成范式规划
 2. 先固定 VAE latent 接口和 Diffusers `AutoencoderKL` 使用方式
 3. 默认使用预训练 `stabilityai/sd-vae-ft-mse`，必要时再基于 `MSE + KL` 微调
 4. 其余方法目录先占位，后续按优先级逐步实现
