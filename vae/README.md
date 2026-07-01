@@ -1,0 +1,119 @@
+# vae
+
+本目录用于准备当前小型 `Stable Diffusion` 路线的前置 `VAE`。
+
+当前主线不手写 VAE 网络，统一使用 Hugging Face Diffusers 的 `AutoencoderKL`。
+
+## 当前目标
+
+- 输入动漫头像图片。
+- 默认加载预训练 `stabilityai/sd-vae-ft-mse`。
+- 如确实要适配 DAF 数据，也用 Diffusers `AutoencoderKL` 微调，不再维护自定义 VAE。
+- 输出 Diffusers 原生格式的 `encoder / decoder` checkpoint。
+- 后续 `stable_diffusion/` 中的 latent diffusion 训练将使用这里的 `encoder` 产生空间 latent map，并使用 `decoder` 将 latent map 解码回图像。
+
+## Latent 形状
+
+当前 VAE 采用 Stable Diffusion 的空间 latent 接口，而不是把整张图压成单个向量。
+
+默认设置：
+
+```text
+128 x 128 x 3 -> 4 x 16 x 16
+```
+
+含义：
+
+- 空间尺寸下采样 `8` 倍。
+- latent 通道数为 `4`。
+- 总元素数从 `49152` 变成 `1024`，约 `48` 倍压缩。
+
+后续 U-Net、DiT 或 Flow Matching 都统一吃乘过 `scaling_factor` 的 latent：
+
+```text
+[batch, 4, 16, 16]
+```
+
+Diffusers `AutoencoderKL` 的默认 `scaling_factor` 是 `0.18215`。后续 diffusion 训练使用：
+
+```python
+latents = vae.encode(images).latent_dist.sample()
+latents = latents * vae.config.scaling_factor
+```
+
+解码时使用：
+
+```python
+images = vae.decode(latents / vae.config.scaling_factor).sample
+```
+
+## 数据路径
+
+当前 `DAF` 数据包仍在下载和确认内部结构。已观察到压缩包前部包含类似路径：
+
+```text
+daf/fullMin256/0192/79192.jpg
+```
+
+因此第一版训练代码不硬编码具体子目录，而是对 `--data-dir` 做递归图片扫描。
+
+建议后续解压到：
+
+```text
+dataset/extracted/daf/fullMin256
+```
+
+如果实际解压目录不同，训练时显式传入即可：
+
+```bash
+python vae/train_vae.py --data-dir 实际图片目录
+```
+
+## 训练示例
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/extracted/daf/fullMin256 \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50
+```
+
+默认会从 Hugging Face 加载：
+
+```text
+stabilityai/sd-vae-ft-mse
+```
+
+如果已经有本地 VAE 目录，可以改用：
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/extracted/daf/fullMin256 \
+  --pretrained-vae 本地vae目录
+```
+
+如果必须从零训练，也不要手写网络，使用：
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/extracted/daf/fullMin256 \
+  --init-from-scratch
+```
+
+## 输出文件
+
+默认输出目录：
+
+```text
+vae/runs/vae_daf/
+```
+
+主要文件：
+
+- `best_diffusers/`：验证集 loss 最优的 Diffusers VAE，后续优先用 `AutoencoderKL.from_pretrained()` 读取。
+- `last_diffusers/`：最后一轮 Diffusers VAE。
+- `best.pt`：优化器、scheduler、指标等训练状态。
+- `last.pt`：最后一轮训练状态。
+- `config.json`：本次训练配置。
+- `reconstruction_epoch_*.png`：原图和重建图对比，用于检查 VAE 质量。
