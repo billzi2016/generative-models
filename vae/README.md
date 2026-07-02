@@ -73,36 +73,53 @@ dataset/raw/fullMin256/0192/79192.jpg
 python vae/train_vae.py --data-dir 实际图片目录
 ```
 
-## 训练示例
+## 下载预训练权重
+
+如果走“基于别人训练好的 VAE 再微调”这条路线，先下载权重到本地：
+
+```bash
+python vae/download_pretrained.py \
+  --model-id stabilityai/sd-vae-ft-mse \
+  --output-dir vae/pretrained/sd-vae-ft-mse
+```
+
+说明：
+
+- `stabilityai/sd-vae-ft-mse` 是 Hugging Face model id，不是本地文件路径。
+- `vae/pretrained/sd-vae-ft-mse` 是下载后的本地目录，已加入 `.gitignore`。
+
+## 训练 / 微调示例
+
+路线 A：基于预训练 VAE 微调。
 
 ```bash
 python vae/train_vae.py \
   --data-dir dataset/raw/fullMin256 \
+  --pretrained-vae vae/pretrained/sd-vae-ft-mse \
   --image-size 128 \
   --batch-size 64 \
-  --epochs 50
+  --epochs 50 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
 ```
 
-默认会从 Hugging Face 加载：
+路线 B：从 Diffusers `AutoencoderKL` 架构随机初始化，训练自己的 VAE。
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/raw/fullMin256 \
+  --init-from-scratch \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
+```
+
+两条路线最终都输出：
 
 ```text
-stabilityai/sd-vae-ft-mse
-```
-
-如果已经有本地 VAE 目录，可以改用：
-
-```bash
-python vae/train_vae.py \
-  --data-dir dataset/raw/fullMin256 \
-  --pretrained-vae 本地vae目录
-```
-
-如果必须从零训练，也不要手写网络，使用：
-
-```bash
-python vae/train_vae.py \
-  --data-dir dataset/raw/fullMin256 \
-  --init-from-scratch
+vae/runs/vae_daf/best_diffusers
 ```
 
 ## 输出文件

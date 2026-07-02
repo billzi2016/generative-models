@@ -18,6 +18,7 @@ import h5py
 import torch
 from diffusers import AutoencoderKL
 from torch.utils.data import Dataset
+from torchvision.transforms.functional import to_pil_image
 from torchvision.utils import save_image
 
 
@@ -44,13 +45,15 @@ def require_path(path: str | Path, description: str) -> Path:
 
 def load_best_vae(vae_dir: str | Path = DEFAULT_VAE_DIR, device: torch.device | None = None) -> AutoencoderKL:
     """
-    读取 VAE best Diffusers 权重。
+    读取 VAE Diffusers 权重。
 
-    默认路径固定为 vae/runs/vae_daf/best_diffusers，避免后续方法误用未确认的 VAE。
+    参数可以是本地目录，例如 vae/runs/vae_daf/best_diffusers；
+    也可以是 Hugging Face model id，例如 stabilityai/sd-vae-ft-mse。
     """
-    vae_path = require_path(vae_dir, "VAE best_diffusers 权重目录")
+    expanded_path = Path(str(vae_dir)).expanduser()
+    vae_ref = str(expanded_path) if expanded_path.exists() else str(vae_dir)
     target_device = device or select_device()
-    vae = AutoencoderKL.from_pretrained(vae_path).to(target_device)
+    vae = AutoencoderKL.from_pretrained(vae_ref).to(target_device)
     vae.eval()
     return vae
 
@@ -111,3 +114,24 @@ def save_latent_grid(
     output.parent.mkdir(parents=True, exist_ok=True)
     images = decode_scaled_latents(vae, scaled_latents)
     save_image(images, output, nrow=nrow)
+
+
+@torch.no_grad()
+def save_latent_images(
+    vae: AutoencoderKL,
+    scaled_latents: torch.Tensor,
+    output_dir: str | Path,
+    image_format: str = "jpg",
+    prefix: str = "sample",
+) -> None:
+    """解码一批 latent，并保存成单张图片文件。"""
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    images = decode_scaled_latents(vae, scaled_latents).detach().cpu()
+    extension = image_format.lower().lstrip(".")
+
+    for index, image in enumerate(images):
+        pil_image = to_pil_image(image)
+        if extension in {"jpg", "jpeg"}:
+            pil_image = pil_image.convert("RGB")
+        pil_image.save(output / f"{prefix}_{index:06d}.{extension}")

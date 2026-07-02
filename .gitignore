@@ -35,6 +35,7 @@ generated/
 *.pth
 *.safetensors
 vae/runs/
+vae/pretrained/
 ddpm/runs/
 dit/runs/
 flow_matching/runs/

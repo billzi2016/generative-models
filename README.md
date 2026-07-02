@@ -118,11 +118,21 @@ latent shape = [batch, 4, 16, 16]
 
 ### 1. 准备 VAE
 
-默认使用 Diffusers `AutoencoderKL`。如果直接使用预训练 VAE，可以先跳过微调；如果要在 DAF 上微调：
+VAE 有两条路线，二选一。
+
+路线 A：下载别人训练好的 VAE，然后在 DAF 上微调。
+
+```bash
+python vae/download_pretrained.py \
+  --model-id stabilityai/sd-vae-ft-mse \
+  --output-dir vae/pretrained/sd-vae-ft-mse
+```
 
 ```bash
 python vae/train_vae.py \
   --data-dir dataset/raw/fullMin256 \
+  --pretrained-vae vae/pretrained/sd-vae-ft-mse \
+  --output-dir vae/runs/vae_daf_finetune \
   --image-size 128 \
   --batch-size 64 \
   --epochs 50 \
@@ -130,10 +140,25 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
-训练后应得到：
+路线 B：不用别人权重，从 Diffusers `AutoencoderKL` 架构随机初始化，训练自己的 VAE。
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/raw/fullMin256 \
+  --init-from-scratch \
+  --output-dir vae/runs/vae_daf_from_scratch \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
+```
+
+两条路线的输出目录不同，避免互相覆盖：
 
 ```text
-vae/runs/vae_daf/best_diffusers
+路线 A：vae/runs/vae_daf_finetune/best_diffusers
+路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
 ```
 
 默认只强制保存 `best_diffusers/`，不会无限保存 checkpoint。更细节见：
@@ -144,43 +169,49 @@ vae/dataset_treatment.md
 
 ### 2. 缓存全量 latent
 
-VAE best 确定后，把全量图片 encode 成单个 HDF5 文件：
+VAE best 确定后，把全量图片 encode 成单个 HDF5 文件。
+
+路线 A：
 
 ```bash
-python vae/cache_latents.py
+python vae/cache_latents.py \
+  --data-dir dataset/raw/fullMin256 \
+  --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
+  --output dataset/latents/vae_daf_128_finetune.h5
 ```
 
-输出：
+路线 B：
+
+```bash
+python vae/cache_latents.py \
+  --data-dir dataset/raw/fullMin256 \
+  --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
+  --output dataset/latents/vae_daf_128_from_scratch.h5
+```
+
+输出分别是：
 
 ```text
-dataset/latents/vae_daf_128_best.h5
+路线 A：dataset/latents/vae_daf_128_finetune.h5
+路线 B：dataset/latents/vae_daf_128_from_scratch.h5
 ```
 
 HDF5 中保存的是乘过 `vae.config.scaling_factor` 的 `float16` latent，默认 gzip 压缩等级为 `1`。
 
 ### 3. 训练不同 latent generator
 
-```bash
-python ddpm/train.py
-python dit/train.py
-python flow_matching/train.py
-python gan/train.py
-```
+选择一个或多个方法训练。具体命令见下一节“各方法训练与生成”。
 
-各方法默认读取：
+两条路线读取不同 latent 缓存：
 
 ```text
-dataset/latents/vae_daf_128_best.h5
+路线 A：dataset/latents/vae_daf_128_finetune.h5
+路线 B：dataset/latents/vae_daf_128_from_scratch.h5
 ```
 
 ### 4. 采样生成图片
 
-```bash
-python ddpm/sample.py
-python dit/sample.py
-python flow_matching/sample.py
-python gan/sample.py
-```
+训练完成后，使用对应方法的 sample 命令生成图片。具体命令同样见下一节“各方法训练与生成”。
 
 说明：
 
@@ -192,78 +223,146 @@ python gan/sample.py
 
 ### DDPM
 
-训练：
+路线 A：
 
 ```bash
+# 训练 DDPM，读取路线 A 的 latent 缓存。
 python ddpm/train.py \
-  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
-  --output-dir ddpm/runs/latent_ddpm
+  --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
+  --output-dir ddpm/runs/latent_ddpm_finetune
+
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
+python ddpm/sample.py \
+  --model-dir ddpm/runs/latent_ddpm_finetune/best_model \
+  --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
+  --num-images 128 \
+  --output-dir ddpm/runs/latent_ddpm_finetune/samples_jpg \
+  --image-format jpg
 ```
 
-生成：
+路线 B：
 
 ```bash
+# 训练 DDPM，读取路线 B 的 latent 缓存。
+python ddpm/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
+  --output-dir ddpm/runs/latent_ddpm_from_scratch
+
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python ddpm/sample.py \
-  --model-dir ddpm/runs/latent_ddpm/best_model \
-  --vae-dir vae/runs/vae_daf/best_diffusers \
-  --output ddpm/runs/latent_ddpm/samples.png
+  --model-dir ddpm/runs/latent_ddpm_from_scratch/best_model \
+  --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
+  --num-images 128 \
+  --output-dir ddpm/runs/latent_ddpm_from_scratch/samples_jpg \
+  --image-format jpg
 ```
 
 ### DiT
 
-训练：
+路线 A：
 
 ```bash
+# 训练 DiT，读取路线 A 的 latent 缓存。
 python dit/train.py \
-  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
-  --output-dir dit/runs/latent_dit
+  --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
+  --output-dir dit/runs/latent_dit_finetune
+
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
+python dit/sample.py \
+  --model-dir dit/runs/latent_dit_finetune/best_model \
+  --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
+  --num-images 128 \
+  --output-dir dit/runs/latent_dit_finetune/samples_jpg \
+  --image-format jpg
 ```
 
-生成：
+路线 B：
 
 ```bash
+# 训练 DiT，读取路线 B 的 latent 缓存。
+python dit/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
+  --output-dir dit/runs/latent_dit_from_scratch
+
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python dit/sample.py \
-  --model-dir dit/runs/latent_dit/best_model \
-  --vae-dir vae/runs/vae_daf/best_diffusers \
-  --output dit/runs/latent_dit/samples.png
+  --model-dir dit/runs/latent_dit_from_scratch/best_model \
+  --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
+  --num-images 128 \
+  --output-dir dit/runs/latent_dit_from_scratch/samples_jpg \
+  --image-format jpg
 ```
 
 ### Flow Matching
 
-训练：
+路线 A：
 
 ```bash
+# 训练 Flow Matching，读取路线 A 的 latent 缓存。
 python flow_matching/train.py \
-  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
-  --output-dir flow_matching/runs/latent_fm
+  --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
+  --output-dir flow_matching/runs/latent_fm_finetune
+
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
+python flow_matching/sample.py \
+  --model-dir flow_matching/runs/latent_fm_finetune/best_model \
+  --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
+  --num-images 128 \
+  --output-dir flow_matching/runs/latent_fm_finetune/samples_jpg \
+  --image-format jpg
 ```
 
-生成：
+路线 B：
 
 ```bash
+# 训练 Flow Matching，读取路线 B 的 latent 缓存。
+python flow_matching/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
+  --output-dir flow_matching/runs/latent_fm_from_scratch
+
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python flow_matching/sample.py \
-  --model-dir flow_matching/runs/latent_fm/best_model \
-  --vae-dir vae/runs/vae_daf/best_diffusers \
-  --output flow_matching/runs/latent_fm/samples.png
+  --model-dir flow_matching/runs/latent_fm_from_scratch/best_model \
+  --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
+  --num-images 128 \
+  --output-dir flow_matching/runs/latent_fm_from_scratch/samples_jpg \
+  --image-format jpg
 ```
 
 ### GAN
 
-训练：
+路线 A：
 
 ```bash
+# 训练 latent GAN，读取路线 A 的 latent 缓存。
 python gan/train.py \
-  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
-  --output-dir gan/runs/latent_gan
+  --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
+  --output-dir gan/runs/latent_gan_finetune
+
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
+python gan/sample.py \
+  --checkpoint gan/runs/latent_gan_finetune/best.pt \
+  --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
+  --num-images 128 \
+  --output-dir gan/runs/latent_gan_finetune/samples_jpg \
+  --image-format jpg
 ```
 
-生成：
+路线 B：
 
 ```bash
+# 训练 latent GAN，读取路线 B 的 latent 缓存。
+python gan/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
+  --output-dir gan/runs/latent_gan_from_scratch
+
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python gan/sample.py \
-  --checkpoint gan/runs/latent_gan/best.pt \
-  --vae-dir vae/runs/vae_daf/best_diffusers \
-  --output gan/runs/latent_gan/samples.png
+  --checkpoint gan/runs/latent_gan_from_scratch/best.pt \
+  --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
+  --num-images 128 \
+  --output-dir gan/runs/latent_gan_from_scratch/samples_jpg \
+  --image-format jpg
 ```
 
 ## 测试

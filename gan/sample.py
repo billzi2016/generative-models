@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from common.latent import DEFAULT_VAE_DIR, load_best_vae, save_latent_grid, select_device
+from common.latent import DEFAULT_VAE_DIR, load_best_vae, save_latent_grid, save_latent_images, select_device
 from gan.models import LatentGenerator
 
 
@@ -26,6 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoint", default="gan/runs/latent_gan/best.pt")
     parser.add_argument("--vae-dir", default=str(DEFAULT_VAE_DIR))
     parser.add_argument("--output", default="gan/runs/latent_gan/samples.png")
+    parser.add_argument("--output-dir", default=None, help="如果设置，则保存单张图片序列")
+    parser.add_argument("--image-format", default="jpg", choices=("jpg", "png"), help="单张图片输出格式")
     parser.add_argument("--num-images", type=int, default=16)
     parser.add_argument("--seed", type=int, default=42)
     return parser.parse_args()
@@ -47,8 +49,12 @@ def main() -> None:
     torch.manual_seed(args.seed)
     noise = torch.randn(args.num_images, noise_dim, device=device)
     latents = generator(noise)
-    save_latent_grid(vae, latents, args.output, nrow=4)
-    print(f"已保存样例: {args.output}")
+    if args.output_dir:
+        save_latent_images(vae, latents, args.output_dir, image_format=args.image_format)
+        print(f"已保存样例目录: {args.output_dir}")
+    else:
+        save_latent_grid(vae, latents, args.output, nrow=4)
+        print(f"已保存样例: {args.output}")
 
 
 if __name__ == "__main__":
