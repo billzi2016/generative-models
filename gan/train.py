@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from common.latent import DEFAULT_LATENTS_H5, select_device
-from common.training import create_latent_dataloaders, prune_numbered_checkpoints, save_json, seed_everything
+from common.training import create_latent_dataloaders, prune_numbered_checkpoints, record_metrics, save_json, seed_everything
 from gan.models import LatentDiscriminator, LatentGenerator
 
 
@@ -182,7 +182,7 @@ def main() -> None:
         val_score = validate_generator(ema_generator, discriminator, val_loader, device, config)
         metrics = {"epoch": epoch, **train_metrics, "val_fake_score": val_score}
         print(json.dumps(metrics, ensure_ascii=False, indent=2))
-        save_json(output_dir / "last_metrics.json", metrics)
+        record_metrics(output_dir, metrics)
 
         save_gan(output_dir / "last.pt", generator, discriminator, ema_generator, config, metrics)
         if val_score > best_score:

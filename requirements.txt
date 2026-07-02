@@ -6,3 +6,4 @@ diffusers
 accelerate
 safetensors
 h5py
+matplotlib

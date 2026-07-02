@@ -28,7 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from common.latent import DEFAULT_LATENTS_H5, select_device
-from common.training import create_latent_dataloaders, prune_numbered_checkpoints, save_json, seed_everything
+from common.training import create_latent_dataloaders, prune_numbered_checkpoints, record_metrics, save_json, seed_everything
 
 
 @dataclass
@@ -155,7 +155,7 @@ def main() -> None:
 
         metrics = {"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss, "lr": optimizer.param_groups[0]["lr"]}
         print(json.dumps(metrics, ensure_ascii=False, indent=2))
-        save_json(output_dir / "last_metrics.json", metrics)
+        record_metrics(output_dir, metrics)
 
         model.save_pretrained(output_dir / "last_model", safe_serialization=True)
         noise_scheduler.save_pretrained(output_dir / "scheduler")

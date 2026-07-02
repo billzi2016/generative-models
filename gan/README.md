@@ -2,7 +2,8 @@
 
 本目录实现 `latent GAN` 生成基线。
 
-它不是当前 Stable Diffusion 风格主线的优先方法，但可以作为采样速度快的横向对照。
+它是 experimental baseline，不是当前主线。主线优先看 `ddpm/`、`dit/` 和 `flow_matching/`。
+GAN 的作用是提供采样速度快的横向对照，不保证稳定性优于扩散或 flow 方法。
 
 当前配置：
 

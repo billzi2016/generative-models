@@ -16,6 +16,7 @@ import argparse
 import json
 import random
 import shutil
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -28,6 +29,11 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.utils import save_image
 from tqdm import tqdm
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from common.training import record_metrics
 from dataset import ImageFolderRecursiveDataset
 from model import DEFAULT_PRETRAINED_VAE, load_autoencoder_kl
 
@@ -328,6 +334,7 @@ def main() -> None:
         scheduler.step(val_metrics["loss"])
 
         metrics = {
+            "epoch": epoch,
             "train_loss": train_metrics["loss"],
             "train_reconstruction_loss": train_metrics["reconstruction_loss"],
             "train_kl_loss": train_metrics["kl_loss"],
@@ -336,7 +343,8 @@ def main() -> None:
             "val_kl_loss": val_metrics["kl_loss"],
             "lr": optimizer.param_groups[0]["lr"],
         }
-        print(json.dumps({"epoch": epoch, **metrics}, ensure_ascii=False, indent=2))
+        print(json.dumps(metrics, ensure_ascii=False, indent=2))
+        record_metrics(output_dir, metrics)
 
         if config.save_training_state:
             save_checkpoint(output_dir / "last.pt", model, optimizer, scheduler, config, epoch, metrics)

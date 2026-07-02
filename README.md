@@ -218,6 +218,7 @@ HDF5 中保存的是乘过 `vae.config.scaling_factor` 的 `float16` latent，�
 - 后续方法默认不重复读取原图，也不重复运行 VAE encoder。
 - 后续方法默认读取同一个 HDF5 latent 缓存。
 - 各方法的 `runs/` 输出都被 `.gitignore` 忽略。
+- 训练过程会在各自 `output-dir` 下追加 `metrics.csv`，并实时覆盖保存 `metrics.jpg`，图片格式为 JPG，`dpi=200`。
 
 ## 各方法训练与生成
 
