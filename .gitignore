@@ -44,6 +44,8 @@ gan/runs/
 # Local data artifacts
 dataset/raw/*
 !dataset/raw/README.md
+dataset/valid_images.txt
+dataset/bad_images.txt
 dataset/latents/
 *.h5
 *.hdf5

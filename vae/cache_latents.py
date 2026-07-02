@@ -51,7 +51,10 @@ def main() -> None:
     device = select_device()
     print(f"使用设备: {device}")
 
-    dataset = ImageFolderRecursiveDataset(args.data_dir, image_size=args.image_size)
+    dataset = ImageFolderRecursiveDataset(
+        args.data_dir,
+        image_size=args.image_size,
+    )
     dataloader = DataLoader(
         dataset,
         batch_size=args.batch_size,

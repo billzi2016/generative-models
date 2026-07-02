@@ -156,7 +156,10 @@ def encode_decode(model: nn.Module, images: Tensor, sample_posterior: bool) -> t
 
 def create_dataloaders(config: TrainConfig) -> tuple[DataLoader, DataLoader]:
     """创建训练和验证 DataLoader。"""
-    dataset = ImageFolderRecursiveDataset(config.data_dir, image_size=config.image_size)
+    dataset = ImageFolderRecursiveDataset(
+        config.data_dir,
+        image_size=config.image_size,
+    )
     val_size = max(1, int(len(dataset) * config.val_ratio))
     train_size = len(dataset) - val_size
     if train_size <= 0:
