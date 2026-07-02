@@ -48,6 +48,8 @@ class TrainConfig:
     num_train_timesteps: int
     checkpoint_every_epochs: int
     max_epoch_checkpoints: int
+    patience: int
+    min_delta: float
 
 
 def parse_args() -> TrainConfig:
@@ -64,6 +66,8 @@ def parse_args() -> TrainConfig:
     parser.add_argument("--num-train-timesteps", type=int, default=1000)
     parser.add_argument("--checkpoint-every-epochs", type=int, default=10)
     parser.add_argument("--max-epoch-checkpoints", type=int, default=10)
+    parser.add_argument("--patience", type=int, default=8)
+    parser.add_argument("--min-delta", type=float, default=1e-4)
     return TrainConfig(**vars(parser.parse_args()))
 
 
@@ -151,26 +155,44 @@ def main() -> None:
     lr_scheduler = CosineAnnealingLR(optimizer, T_max=config.epochs)
 
     best_val_loss = float("inf")
+    bad_epochs = 0
     for epoch in range(1, config.epochs + 1):
         train_loss = run_epoch(model, noise_scheduler, train_loader, device, optimizer)
         val_loss = run_epoch(model, noise_scheduler, val_loader, device)
         lr_scheduler.step()
 
-        metrics = {"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss, "lr": optimizer.param_groups[0]["lr"]}
+        improved = val_loss < best_val_loss - config.min_delta
+        if improved:
+            best_val_loss = val_loss
+            bad_epochs = 0
+        else:
+            bad_epochs += 1
+
+        metrics = {
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "best_val_loss": best_val_loss,
+            "bad_epochs": bad_epochs,
+            "lr": optimizer.param_groups[0]["lr"],
+        }
         print(json.dumps(metrics, ensure_ascii=False, indent=2))
         record_metrics(output_dir, metrics)
 
         model.save_pretrained(output_dir / "last_model", safe_serialization=True)
         noise_scheduler.save_pretrained(output_dir / "scheduler")
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        if improved:
             model.save_pretrained(output_dir / "best_model", safe_serialization=True)
             save_json(output_dir / "best_metrics.json", metrics)
 
         if config.checkpoint_every_epochs > 0 and epoch % config.checkpoint_every_epochs == 0:
             model.save_pretrained(output_dir / f"epoch_{epoch:04d}_model", safe_serialization=True)
             prune_numbered_checkpoints(output_dir, "epoch_*_model", config.max_epoch_checkpoints)
+
+        if bad_epochs >= config.patience:
+            print(f"Early stopping: val_loss 连续 {config.patience} 个 epoch 没有有效改善")
+            break
 
 
 if __name__ == "__main__":

@@ -94,6 +94,22 @@ flow_matching/
 latent Flow Matching 路线。目标是在同一个 VAE latent 空间中学习连续时间 ODE 速度场。
 
 ```text
+vis-flow-matching/
+```
+
+独立的 MNIST Flow Matching 可视化项目。它不依赖 VAE latent，用 `28x28` MNIST 直接演示：
+
+```text
+高斯噪声 -> ODE flow -> 0..9 手写数字 GIF
+```
+
+适合用来理解 Flow Matching 的核心公式、速度场训练和采样轨迹。运行说明见：
+
+```text
+vis-flow-matching/README.md
+```
+
+```text
 gan/
 ```
 
@@ -298,6 +314,7 @@ HDF5 中保存的是乘过 `vae.config.scaling_factor` 的 `float16` latent，�
 - 后续方法默认读取同一个 HDF5 latent 缓存。
 - 各方法的 `runs/` 输出都被 `.gitignore` 忽略。
 - 训练过程会在各自 `output-dir` 下追加 `metrics.csv`，并实时覆盖保存 `metrics.jpg`，图片格式为 JPG，`dpi=200`。
+- DDPM / DiT / Flow Matching 的 early stopping 按 `val_loss` 判断；GAN 按 `val_fake_score` 判断。全量路线命令使用 `--patience 8 --min-delta 1e-4`，10% 快速 VAE 路线命令使用 `--patience 3 --min-delta 1e-4`。
 
 ## 各方法训练与生成
 
@@ -309,7 +326,9 @@ HDF5 中保存的是乘过 `vae.config.scaling_factor` 的 `float16` latent，�
 # 训练 DDPM，读取路线 A 的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
-  --output-dir ddpm/runs/latent_ddpm_finetune
+  --output-dir ddpm/runs/latent_ddpm_finetune \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python ddpm/sample.py \
@@ -326,7 +345,9 @@ python ddpm/sample.py \
 # 训练 DDPM，读取 10% 快速 VAE 生成的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
-  --output-dir ddpm/runs/latent_ddpm_finetune_10pct
+  --output-dir ddpm/runs/latent_ddpm_finetune_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python ddpm/sample.py \
@@ -343,7 +364,9 @@ python ddpm/sample.py \
 # 训练 DDPM，读取路线 B 的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
-  --output-dir ddpm/runs/latent_ddpm_from_scratch
+  --output-dir ddpm/runs/latent_ddpm_from_scratch \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python ddpm/sample.py \
@@ -360,7 +383,9 @@ python ddpm/sample.py \
 # 训练 DDPM，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
-  --output-dir ddpm/runs/latent_ddpm_from_scratch_10pct
+  --output-dir ddpm/runs/latent_ddpm_from_scratch_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python ddpm/sample.py \
@@ -379,7 +404,9 @@ python ddpm/sample.py \
 # 训练 DiT，读取路线 A 的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
-  --output-dir dit/runs/latent_dit_finetune
+  --output-dir dit/runs/latent_dit_finetune \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python dit/sample.py \
@@ -396,7 +423,9 @@ python dit/sample.py \
 # 训练 DiT，读取 10% 快速 VAE 生成的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
-  --output-dir dit/runs/latent_dit_finetune_10pct
+  --output-dir dit/runs/latent_dit_finetune_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python dit/sample.py \
@@ -413,7 +442,9 @@ python dit/sample.py \
 # 训练 DiT，读取路线 B 的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
-  --output-dir dit/runs/latent_dit_from_scratch
+  --output-dir dit/runs/latent_dit_from_scratch \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python dit/sample.py \
@@ -430,7 +461,9 @@ python dit/sample.py \
 # 训练 DiT，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
-  --output-dir dit/runs/latent_dit_from_scratch_10pct
+  --output-dir dit/runs/latent_dit_from_scratch_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python dit/sample.py \
@@ -449,7 +482,9 @@ python dit/sample.py \
 # 训练 Flow Matching，读取路线 A 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
-  --output-dir flow_matching/runs/latent_fm_finetune
+  --output-dir flow_matching/runs/latent_fm_finetune \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python flow_matching/sample.py \
@@ -466,7 +501,9 @@ python flow_matching/sample.py \
 # 训练 Flow Matching，读取 10% 快速 VAE 生成的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
-  --output-dir flow_matching/runs/latent_fm_finetune_10pct
+  --output-dir flow_matching/runs/latent_fm_finetune_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python flow_matching/sample.py \
@@ -483,7 +520,9 @@ python flow_matching/sample.py \
 # 训练 Flow Matching，读取路线 B 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
-  --output-dir flow_matching/runs/latent_fm_from_scratch
+  --output-dir flow_matching/runs/latent_fm_from_scratch \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python flow_matching/sample.py \
@@ -500,7 +539,9 @@ python flow_matching/sample.py \
 # 训练 Flow Matching，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
-  --output-dir flow_matching/runs/latent_fm_from_scratch_10pct
+  --output-dir flow_matching/runs/latent_fm_from_scratch_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python flow_matching/sample.py \
@@ -519,7 +560,9 @@ python flow_matching/sample.py \
 # 训练 latent GAN，读取路线 A 的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
-  --output-dir gan/runs/latent_gan_finetune
+  --output-dir gan/runs/latent_gan_finetune \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python gan/sample.py \
@@ -536,7 +579,9 @@ python gan/sample.py \
 # 训练 latent GAN，读取 10% 快速 VAE 生成的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
-  --output-dir gan/runs/latent_gan_finetune_10pct
+  --output-dir gan/runs/latent_gan_finetune_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python gan/sample.py \
@@ -553,7 +598,9 @@ python gan/sample.py \
 # 训练 latent GAN，读取路线 B 的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
-  --output-dir gan/runs/latent_gan_from_scratch
+  --output-dir gan/runs/latent_gan_from_scratch \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python gan/sample.py \
@@ -570,7 +617,9 @@ python gan/sample.py \
 # 训练 latent GAN，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
-  --output-dir gan/runs/latent_gan_from_scratch_10pct
+  --output-dir gan/runs/latent_gan_from_scratch_10pct \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python gan/sample.py \

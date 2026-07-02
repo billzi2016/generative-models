@@ -39,7 +39,9 @@ python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir flow_matching/runs/latent_fm_finetune \
   --batch-size 128 \
-  --epochs 100
+  --epochs 100 \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python flow_matching/sample.py \
@@ -58,7 +60,9 @@ python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir flow_matching/runs/latent_fm_finetune_10pct \
   --batch-size 128 \
-  --epochs 100
+  --epochs 100 \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 A 10% 快速 VAE decoder。
 python flow_matching/sample.py \
@@ -77,7 +81,9 @@ python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir flow_matching/runs/latent_fm_from_scratch \
   --batch-size 128 \
-  --epochs 100
+  --epochs 100 \
+  --patience 8 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python flow_matching/sample.py \
@@ -96,7 +102,9 @@ python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir flow_matching/runs/latent_fm_from_scratch_10pct \
   --batch-size 128 \
-  --epochs 100
+  --epochs 100 \
+  --patience 3 \
+  --min-delta 1e-4
 
 # 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE decoder。
 python flow_matching/sample.py \
@@ -108,3 +116,5 @@ python flow_matching/sample.py \
 ```
 
 采样使用 Euler ODE 积分，默认 `50` 步。
+
+Early stopping 按 `val_loss` 判断：全量路线使用 `--patience 8 --min-delta 1e-4`，10% 快速 VAE 路线使用 `--patience 3 --min-delta 1e-4`。

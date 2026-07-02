@@ -44,6 +44,8 @@ class TrainConfig:
     ema_decay: float
     checkpoint_every_epochs: int
     max_epoch_checkpoints: int
+    patience: int
+    min_delta: float
 
 
 def parse_args() -> TrainConfig:
@@ -62,6 +64,8 @@ def parse_args() -> TrainConfig:
     parser.add_argument("--ema-decay", type=float, default=0.999)
     parser.add_argument("--checkpoint-every-epochs", type=int, default=10)
     parser.add_argument("--max-epoch-checkpoints", type=int, default=10)
+    parser.add_argument("--patience", type=int, default=8)
+    parser.add_argument("--min-delta", type=float, default=1e-4)
     args = parser.parse_args()
     return TrainConfig(**vars(args))
 
@@ -177,22 +181,39 @@ def main() -> None:
     opt_d = AdamW(discriminator.parameters(), lr=config.lr_d, betas=tuple(config.betas))
 
     best_score = -float("inf")
+    bad_epochs = 0
     for epoch in range(1, config.epochs + 1):
         train_metrics = train_epoch(generator, discriminator, ema_generator, train_loader, device, opt_g, opt_d, config)
         val_score = validate_generator(ema_generator, discriminator, val_loader, device, config)
-        metrics = {"epoch": epoch, **train_metrics, "val_fake_score": val_score}
+        improved = val_score > best_score + config.min_delta
+        if improved:
+            best_score = val_score
+            bad_epochs = 0
+        else:
+            bad_epochs += 1
+
+        metrics = {
+            "epoch": epoch,
+            **train_metrics,
+            "val_fake_score": val_score,
+            "best_val_fake_score": best_score,
+            "bad_epochs": bad_epochs,
+        }
         print(json.dumps(metrics, ensure_ascii=False, indent=2))
         record_metrics(output_dir, metrics)
 
         save_gan(output_dir / "last.pt", generator, discriminator, ema_generator, config, metrics)
-        if val_score > best_score:
-            best_score = val_score
+        if improved:
             save_gan(output_dir / "best.pt", generator, discriminator, ema_generator, config, metrics)
             save_json(output_dir / "best_metrics.json", metrics)
 
         if config.checkpoint_every_epochs > 0 and epoch % config.checkpoint_every_epochs == 0:
             save_gan(output_dir / f"epoch_{epoch:04d}.pt", generator, discriminator, ema_generator, config, metrics)
             prune_numbered_checkpoints(output_dir, "epoch_*.pt", config.max_epoch_checkpoints)
+
+        if bad_epochs >= config.patience:
+            print(f"Early stopping: val_fake_score 连续 {config.patience} 个 epoch 没有有效改善")
+            break
 
 
 if __name__ == "__main__":
