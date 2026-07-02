@@ -88,10 +88,16 @@ python vis-flow-matching/make_gif.py \
 vis-flow-matching/runs/mnist_flow/mnist_flow_10x6.gif
 ```
 
+## 可视化
+
+![MNIST Flow Matching](runs/mnist_flow/mnist_flow_10x6.gif)
+
+![MNIST Metrics](runs/mnist_flow/metrics.jpg)
+
 ## 文件说明
 
 - `model.py`：极简 class-conditional U-Net，输入 `x_t, t, label`，输出速度场。
 - `train.py`：训练 MNIST Flow Matching。
 - `make_gif.py`：用训练好的 checkpoint 生成 10 列 6 行 GIF。
 
-`runs/` 输出不需要提交到 git。
+展示用的 GIF 和 JPG 会提交到 git；checkpoint、CSV 和 config 仍然不提交。

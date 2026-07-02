@@ -214,6 +214,8 @@ dataset/bad_images.txt
 
 VAE 可以直接做两张图之间的平滑过渡，不需要 DDPM / diffusion。
 
+![VAE latent interpolation](runs/interpolation_pretrained.gif)
+
 流程：
 
 ```text
@@ -227,9 +229,19 @@ latent A/B 插值
 
 ```bash
 python vae/interpolate_gif.py \
-  --image-a path/to/a.jpg \
-  --image-b path/to/b.jpg \
-  --output vae/runs/interpolation.gif
+  --image-a dataset/raw/fullMin256/0987/1223987.jpg \
+  --image-b dataset/raw/fullMin256/0987/3174987.jpg \
+  --output vae/runs/interpolation_pretrained.gif
+```
+
+上面这条命令不传 `--vae`，默认使用 Hugging Face 上的 `stabilityai/sd-vae-ft-mse`。如果要看自己在 DAF 上微调后的 VAE 插值，需要显式指定本地 `best_diffusers`：
+
+```bash
+python vae/interpolate_gif.py \
+  --image-a dataset/raw/fullMin256/0987/1223987.jpg \
+  --image-b dataset/raw/fullMin256/0987/3174987.jpg \
+  --vae vae/runs/vae_daf_finetune/best_diffusers \
+  --output vae/runs/interpolation_finetune.gif
 ```
 
 默认会使用 `MPS`，输出 latent 形状应为：
@@ -237,3 +249,5 @@ python vae/interpolate_gif.py \
 ```text
 [1, 4, 16, 16]
 ```
+
+这个脚本只用 VAE encoder / decoder 做 latent 空间线性插值，不用 DDPM、DiT、Flow Matching 或 GAN。

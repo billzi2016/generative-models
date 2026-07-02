@@ -110,6 +110,34 @@ vis-flow-matching/README.md
 ```
 
 ```text
+vis-2d-flowmatching/
+```
+
+独立的二维 Flow Matching 可视化项目。它不依赖 VAE latent，直接在二维点云上展示点如何沿速度场移动到目标分布：
+
+```text
+Gaussian noise -> ODE flow -> ring / moons
+```
+
+项目会生成轨迹 GIF 和速度场风向图，运行说明见：
+
+```text
+vis-2d-flowmatching/README.md
+```
+
+可视化预览：
+
+![MNIST Flow Matching](vis-flow-matching/runs/mnist_flow/mnist_flow_10x6.gif)
+
+![Ring Flow](vis-2d-flowmatching/runs/ring/ring_flow.gif)
+
+![Ring Vector Field](vis-2d-flowmatching/runs/ring/ring_vector_field.jpg)
+
+![Moons Flow](vis-2d-flowmatching/runs/moons/moons_flow.gif)
+
+![Moons Vector Field](vis-2d-flowmatching/runs/moons/moons_vector_field.jpg)
+
+```text
 gan/
 ```
 
@@ -656,6 +684,8 @@ bash test/run_dry_tests.sh
 
 VAE 本身也可以做两张图之间的平滑过渡，不需要 DDPM 或 diffusion：
 
+![VAE latent interpolation](vae/runs/interpolation_pretrained.gif)
+
 ```text
 image A -> encoder -> latent A
 image B -> encoder -> latent B
@@ -667,9 +697,19 @@ latent A/B 插值
 
 ```bash
 python vae/interpolate_gif.py \
-  --image-a path/to/a.jpg \
-  --image-b path/to/b.jpg \
-  --output vae/runs/interpolation.gif
+  --image-a dataset/raw/fullMin256/0987/1223987.jpg \
+  --image-b dataset/raw/fullMin256/0987/3174987.jpg \
+  --output vae/runs/interpolation_pretrained.gif
+```
+
+不传 `--vae` 时，默认使用 `stabilityai/sd-vae-ft-mse`。如果要用自己微调后的 VAE：
+
+```bash
+python vae/interpolate_gif.py \
+  --image-a dataset/raw/fullMin256/0987/1223987.jpg \
+  --image-b dataset/raw/fullMin256/0987/3174987.jpg \
+  --vae vae/runs/vae_daf_finetune/best_diffusers \
+  --output vae/runs/interpolation_finetune.gif
 ```
 
 ## 当前实现原则

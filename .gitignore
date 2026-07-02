@@ -35,12 +35,32 @@ generated/
 *.pth
 *.safetensors
 vae/runs/
+!vae/runs/
+vae/runs/*
+!vae/runs/interpolation_pretrained.gif
 vae/pretrained/
 ddpm/runs/
 dit/runs/
 flow_matching/runs/
 gan/runs/
 vis-flow-matching/runs/
+!vis-flow-matching/runs/
+vis-flow-matching/runs/*
+!vis-flow-matching/runs/mnist_flow/
+vis-flow-matching/runs/mnist_flow/*
+!vis-flow-matching/runs/mnist_flow/*.gif
+!vis-flow-matching/runs/mnist_flow/*.jpg
+vis-2d-flowmatching/runs/
+!vis-2d-flowmatching/runs/
+vis-2d-flowmatching/runs/*
+!vis-2d-flowmatching/runs/ring/
+!vis-2d-flowmatching/runs/moons/
+vis-2d-flowmatching/runs/ring/*
+vis-2d-flowmatching/runs/moons/*
+!vis-2d-flowmatching/runs/ring/*.gif
+!vis-2d-flowmatching/runs/ring/*.jpg
+!vis-2d-flowmatching/runs/moons/*.gif
+!vis-2d-flowmatching/runs/moons/*.jpg
 
 # Local data artifacts
 dataset/raw/*
