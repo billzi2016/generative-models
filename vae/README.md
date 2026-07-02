@@ -96,6 +96,7 @@ python vae/download_pretrained.py \
 python vae/train_vae.py \
   --data-dir dataset/raw/fullMin256 \
   --pretrained-vae vae/pretrained/sd-vae-ft-mse \
+  --output-dir vae/runs/vae_daf_finetune \
   --image-size 128 \
   --batch-size 64 \
   --epochs 50 \
@@ -109,6 +110,7 @@ python vae/train_vae.py \
 python vae/train_vae.py \
   --data-dir dataset/raw/fullMin256 \
   --init-from-scratch \
+  --output-dir vae/runs/vae_daf_from_scratch \
   --image-size 128 \
   --batch-size 64 \
   --epochs 50 \
@@ -116,19 +118,22 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
-两条路线最终都输出：
+两条路线输出到不同目录，避免互相覆盖：
 
 ```text
-vae/runs/vae_daf/best_diffusers
+路线 A：vae/runs/vae_daf_finetune/best_diffusers
+路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
 ```
 
 ## 输出文件
 
-默认输出目录：
+如果不显式传 `--output-dir`，默认输出目录：
 
 ```text
 vae/runs/vae_daf/
 ```
+
+当前建议两条路线都显式指定 `--output-dir`。
 
 主要文件：
 

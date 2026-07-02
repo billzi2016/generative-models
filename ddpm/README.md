@@ -16,28 +16,55 @@
 python vae/cache_latents.py
 ```
 
-默认读取：
+两条 VAE 路线对应两套输入：
 
 ```text
-dataset/latents/vae_daf_128_best.h5
-vae/runs/vae_daf/best_diffusers
+路线 A：dataset/latents/vae_daf_128_finetune.h5
+路线 A：vae/runs/vae_daf_finetune/best_diffusers
+
+路线 B：dataset/latents/vae_daf_128_from_scratch.h5
+路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
 ```
 
-## 训练
+## 路线 A：基于预训练 VAE 微调
 
 ```bash
+# 训练 DDPM，读取路线 A 的 latent 缓存。
 python ddpm/train.py \
-  --latents-h5 dataset/latents/vae_daf_128_best.h5 \
-  --output-dir ddpm/runs/latent_ddpm \
+  --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
+  --output-dir ddpm/runs/latent_ddpm_finetune \
   --batch-size 128 \
   --epochs 100
+
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
+python ddpm/sample.py \
+  --model-dir ddpm/runs/latent_ddpm_finetune/best_model \
+  --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
+  --num-images 128 \
+  --output-dir ddpm/runs/latent_ddpm_finetune/samples_jpg \
+  --image-format jpg
 ```
 
-输出目录：
+## 路线 B：从零训练 VAE
 
-```text
-ddpm/runs/latent_ddpm/
+```bash
+# 训练 DDPM，读取路线 B 的 latent 缓存。
+python ddpm/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
+  --output-dir ddpm/runs/latent_ddpm_from_scratch \
+  --batch-size 128 \
+  --epochs 100
+
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
+python ddpm/sample.py \
+  --model-dir ddpm/runs/latent_ddpm_from_scratch/best_model \
+  --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
+  --num-images 128 \
+  --output-dir ddpm/runs/latent_ddpm_from_scratch/samples_jpg \
+  --image-format jpg
 ```
+
+## 输出
 
 默认保存：
 
@@ -45,14 +72,5 @@ ddpm/runs/latent_ddpm/
 - `last_model/`
 - `scheduler/`
 - 少量 `epoch_XXXX_model/`，数量由 `--max-epoch-checkpoints` 控制
-
-## 采样
-
-```bash
-python ddpm/sample.py \
-  --model-dir ddpm/runs/latent_ddpm/best_model \
-  --vae-dir vae/runs/vae_daf/best_diffusers \
-  --output ddpm/runs/latent_ddpm/samples.png
-```
 
 采样使用 `DDIMScheduler`，默认 `50` 步。
