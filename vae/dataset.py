@@ -14,6 +14,7 @@ VAE 数据集读取模块。
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Iterable
 
@@ -89,16 +90,37 @@ def _write_if_changed(path: Path, lines: list[str]) -> None:
     tmp_path.replace(path)
 
 
+def _inspect_image(image_path: Path) -> tuple[Path, bool]:
+    """
+    检查单张图片是否可用于训练。
+
+    返回:
+        (image_path, is_valid)
+    """
+    try:
+        with Image.open(image_path) as image:
+            image.verify()
+        with Image.open(image_path) as image:
+            width, height = image.size
+        if height <= 0 or width / height >= MAX_LANDSCAPE_ASPECT_RATIO:
+            return image_path, False
+        return image_path, True
+    except Exception:
+        return image_path, False
+
+
 def scan_image_lists(
     data_dir: str | Path,
     valid_list_path: str | Path = "dataset/valid_images.txt",
     bad_list_path: str | Path = "dataset/bad_images.txt",
+    scan_workers: int = 8,
 ) -> list[Path]:
     """
     每次启动时全量扫描图片，生成当前可用图片列表。
 
     行为：
     - 总是扫描当前数据目录，带进度条，确保数据集变动能被发现。
+    - 默认使用 8 个线程扫描图片，避免 33 万张图单线程扫描过慢。
     - 只有 valid/bad 列表内容变化时才写文件，避免没变化时重复写 SSD。
     - 返回本次扫描得到的 valid paths，训练直接使用内存结果，不依赖旧文件。
     """
@@ -109,18 +131,14 @@ def scan_image_lists(
     valid_paths: list[Path] = []
     bad_paths: list[Path] = []
 
-    for image_path in tqdm(image_paths, desc="scan images"):
-        try:
-            with Image.open(image_path) as image:
-                image.verify()
-            with Image.open(image_path) as image:
-                width, height = image.size
-            if height <= 0 or width / height >= MAX_LANDSCAPE_ASPECT_RATIO:
-                bad_paths.append(image_path)
-            else:
+    worker_count = max(1, scan_workers)
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        results = executor.map(_inspect_image, image_paths)
+        for image_path, is_valid in tqdm(results, total=len(image_paths), desc=f"scan images ({worker_count} workers)"):
+            if is_valid:
                 valid_paths.append(image_path)
-        except Exception:
-            bad_paths.append(image_path)
+            else:
+                bad_paths.append(image_path)
 
     valid_lines = [str(path) for path in valid_paths]
     bad_lines = [str(path) for path in bad_paths]
@@ -145,9 +163,10 @@ class ImageFolderRecursiveDataset(Dataset):
         image_size: int = 128,
         valid_list_path: str | Path = "dataset/valid_images.txt",
         bad_list_path: str | Path = "dataset/bad_images.txt",
+        scan_workers: int = 8,
     ) -> None:
         self.data_dir = Path(data_dir).expanduser().resolve()
-        self.image_paths = scan_image_lists(self.data_dir, valid_list_path, bad_list_path)
+        self.image_paths = scan_image_lists(self.data_dir, valid_list_path, bad_list_path, scan_workers=scan_workers)
         if not self.image_paths:
             raise RuntimeError(f"没有在目录中找到图片: {self.data_dir}")
 

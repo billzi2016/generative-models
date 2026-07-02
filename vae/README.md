@@ -78,6 +78,13 @@ dataset/raw/fullMin256/0192/79192.jpg
 
 这样可以过滤明显不适合头像训练的超宽横图，同时避免竖图被直接拉伸变形。
 
+数据扫描策略：
+
+- 每次训练或缓存 latent 前都会重新扫描图片，避免数据集变化或上次中断后沿用旧清单。
+- 默认使用 `--scan-workers 8` 并显示 `tqdm` 进度条；这里是并发扫描 worker，用于加速 PIL 打开和图片校验。
+- 扫描结果写入 `dataset/valid_images.txt` 和 `dataset/bad_images.txt`，但只有内容变化时才重写文件，避免每次启动都重复写 SSD。
+- 训练集实际读取 `valid_images.txt`，坏图不会进入 DataLoader，因此不会在训练中途因为截断图片崩溃。
+
 如果后续换了数据目录，训练时显式传入即可：
 
 ```bash
@@ -114,6 +121,24 @@ python vae/train_vae.py \
   --checkpoint-every-epochs 5 \
   --max-epoch-checkpoints 10
 ```
+
+如果只是先确认训练流程、MPS、checkpoint 和 reconstruction 输出是否正常，可以固定随机抽 `10%` valid 图片跑快速版：
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/raw/fullMin256 \
+  --pretrained-vae vae/pretrained/sd-vae-ft-mse \
+  --output-dir vae/runs/vae_daf_finetune_10pct \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50 \
+  --dataset-fraction 0.1 \
+  --seed 42 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
+```
+
+说明：`--dataset-fraction 0.1` 会在完成坏图扫描后，从 valid 图片中按 `--seed 42` 固定随机抽样 `10%`。默认值是 `1.0`，也就是全量训练。
 
 路线 B：从 Diffusers `AutoencoderKL` 架构随机初始化，训练自己的 VAE。
 

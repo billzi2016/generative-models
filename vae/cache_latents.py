@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-size", type=int, default=128, help="VAE 输入尺寸")
     parser.add_argument("--batch-size", type=int, default=128, help="编码 batch size")
     parser.add_argument("--num-workers", type=int, default=4, help="DataLoader worker 数量")
+    parser.add_argument("--scan-workers", type=int, default=8, help="扫描图片 valid/bad 清单时使用的线程数")
     parser.add_argument("--compression-opts", type=int, default=1, help="gzip 压缩等级，默认 1")
     return parser.parse_args()
 
@@ -54,6 +55,7 @@ def main() -> None:
     dataset = ImageFolderRecursiveDataset(
         args.data_dir,
         image_size=args.image_size,
+        scan_workers=args.scan_workers,
     )
     dataloader = DataLoader(
         dataset,

@@ -25,7 +25,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset, random_split
 from torchvision.utils import save_image
 from tqdm import tqdm
 
@@ -61,6 +61,8 @@ class TrainConfig:
     save_training_state: bool
     checkpoint_every_epochs: int
     max_epoch_checkpoints: int
+    scan_workers: int
+    dataset_fraction: float
 
 
 class EarlyStopping:
@@ -110,7 +112,11 @@ def parse_args() -> TrainConfig:
     parser.add_argument("--save-training-state", action="store_true", help="保存 optimizer/scheduler 状态 .pt；体积较大，默认关闭")
     parser.add_argument("--checkpoint-every-epochs", type=int, default=0, help="每隔多少个 epoch 保存一个 Diffusers checkpoint；0 表示不保存周期点")
     parser.add_argument("--max-epoch-checkpoints", type=int, default=10, help="最多保留多少个周期 checkpoint，避免占满 SSD")
+    parser.add_argument("--scan-workers", type=int, default=8, help="扫描图片 valid/bad 清单时使用的线程数")
+    parser.add_argument("--dataset-fraction", type=float, default=1.0, help="训练前从 valid 图片中固定随机抽样的比例，例如 0.1 表示只用 10% 数据")
     args = parser.parse_args()
+    if not 0 < args.dataset_fraction <= 1:
+        raise ValueError("--dataset-fraction 必须在 (0, 1] 范围内")
     return TrainConfig(**vars(args))
 
 
@@ -165,7 +171,17 @@ def create_dataloaders(config: TrainConfig) -> tuple[DataLoader, DataLoader]:
     dataset = ImageFolderRecursiveDataset(
         config.data_dir,
         image_size=config.image_size,
+        scan_workers=config.scan_workers,
     )
+
+    if config.dataset_fraction < 1.0:
+        original_size = len(dataset)
+        sampled_size = min(original_size, max(2, int(original_size * config.dataset_fraction)))
+        generator = torch.Generator().manual_seed(config.seed)
+        indices = torch.randperm(original_size, generator=generator)[:sampled_size].tolist()
+        dataset = Subset(dataset, indices)
+        print(f"数据抽样: 使用 {sampled_size}/{original_size} 张 valid 图片 ({config.dataset_fraction:.2%}), seed={config.seed}")
+
     val_size = max(1, int(len(dataset) * config.val_ratio))
     train_size = len(dataset) - val_size
     if train_size <= 0:

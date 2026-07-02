@@ -14,8 +14,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
+
+warnings.filterwarnings("ignore", message=r"urllib3 .* doesn't match a supported version!")
 
 import torch
 import torch.nn.functional as F

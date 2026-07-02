@@ -12,7 +12,10 @@ latent 训练共享工具。
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings("ignore", message=r"urllib3 .* doesn't match a supported version!")
 
 import h5py
 import torch

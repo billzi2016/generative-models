@@ -9,7 +9,10 @@
 from __future__ import annotations
 
 import argparse
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings("ignore", message=r"urllib3 .* doesn't match a supported version!")
 
 from diffusers import AutoencoderKL
 

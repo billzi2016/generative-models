@@ -8,6 +8,10 @@ encode、decode、save_pretrained、from_pretrained 和 scaling_factor 约定。
 
 from __future__ import annotations
 
+import warnings
+
+warnings.filterwarnings("ignore", message=r"urllib3 .* doesn't match a supported version!")
+
 from diffusers import AutoencoderKL
 
 

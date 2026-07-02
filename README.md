@@ -140,6 +140,22 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
+如果全量微调太慢，可以先用固定随机 `10%` valid 图片验证训练流程：
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/raw/fullMin256 \
+  --pretrained-vae vae/pretrained/sd-vae-ft-mse \
+  --output-dir vae/runs/vae_daf_finetune_10pct \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50 \
+  --dataset-fraction 0.1 \
+  --seed 42 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
+```
+
 路线 B：不用别人权重，从 Diffusers `AutoencoderKL` 架构随机初始化，训练自己的 VAE。
 
 ```bash
@@ -154,12 +170,44 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
+路线 B 也可以先用固定随机 `10%` valid 图片验证从零训练流程：
+
+```bash
+python vae/train_vae.py \
+  --data-dir dataset/raw/fullMin256 \
+  --init-from-scratch \
+  --output-dir vae/runs/vae_daf_from_scratch_10pct \
+  --image-size 128 \
+  --batch-size 64 \
+  --epochs 50 \
+  --dataset-fraction 0.1 \
+  --seed 42 \
+  --checkpoint-every-epochs 5 \
+  --max-epoch-checkpoints 10
+```
+
 两条路线的输出目录不同，避免互相覆盖：
 
 ```text
 路线 A：vae/runs/vae_daf_finetune/best_diffusers
 路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
 ```
+
+两条路线使用同一套数据处理和验证集逻辑：
+
+- 先扫描 `dataset/raw/fullMin256`，过滤坏图，得到 valid 图片列表。
+- 如果传 `--dataset-fraction 0.1 --seed 42`，就在 valid 图片里固定随机抽 `10%`。
+- 然后再按 `--val-ratio` 划分 train / val。
+- `train` 用于更新 VAE 权重，`val` 用于选择 `best_diffusers/`。
+- 路线 A 和路线 B 的区别只在初始化：A 从预训练 VAE 微调，B 从随机权重开始训练。
+
+VAE 训练和 latent 缓存启动时都会扫描图片：
+
+- 默认 `--scan-workers 8`，带 `tqdm` 进度条。
+- 扫描会生成 `dataset/valid_images.txt` 和 `dataset/bad_images.txt`。
+- 每次启动都会重新扫描，避免数据集变化或上次中断后沿用旧清单。
+- 如果扫描结果没变化，不会重写清单文件，减少无意义 SSD 写入。
+- `--dataset-fraction 0.1 --seed 42` 会在完成坏图扫描后，从 valid 图片中固定随机抽样 `10%`；默认 `1.0` 是全量训练。
 
 默认只强制保存 `best_diffusers/`，不会无限保存 checkpoint。更细节见：
 
