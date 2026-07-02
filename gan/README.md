@@ -1,42 +1,42 @@
 # gan
 
-本目录实现 `latent GAN` 生成基线。
+This directory implements a `latent GAN` baseline.
 
-它是 experimental baseline，不是当前主线。主线优先看 `ddpm/`、`dit/` 和 `flow_matching/`。
-GAN 的作用是提供采样速度快的横向对照，不保证稳定性优于扩散或 flow 方法。
+It is an experimental baseline, not the main line. The main line should prioritize `ddpm/`, `dit/`, and `flow_matching/`.
+The purpose of GAN here is to provide a faster-sampling comparison point, not to guarantee better stability than diffusion or flow methods.
 
-当前配置：
+Current setup:
 
-- Generator 输出 `[B, 4, 16, 16]` VAE scaled latent。
-- Discriminator 在 latent 空间判别真假。
-- 使用 hinge loss。
-- Discriminator 使用 spectral norm。
-- 训练时维护 EMA generator，采样默认使用 EMA 权重。
+- the generator outputs `[B, 4, 16, 16]` VAE scaled latents
+- the discriminator works directly in latent space
+- hinge loss is used
+- the discriminator uses spectral normalization
+- training maintains an EMA generator, and sampling uses EMA weights by default
 
-## 依赖输入
+## Required Inputs
 
 ```bash
 python vae/cache_latents.py
 ```
 
-两条 VAE 路线对应两套输入：
+The two VAE routes correspond to two sets of inputs:
 
 ```text
-路线 A：dataset/latents/vae_daf_128_finetune.h5
-路线 A：vae/runs/vae_daf_finetune/best_diffusers
-路线 A 10%：dataset/latents/vae_daf_128_finetune_10pct.h5
-路线 A 10%：vae/runs/vae_daf_finetune_10pct/best_diffusers
+Route A: dataset/latents/vae_daf_128_finetune.h5
+Route A: vae/runs/vae_daf_finetune/best_diffusers
+Route A 10%: dataset/latents/vae_daf_128_finetune_10pct.h5
+Route A 10%: vae/runs/vae_daf_finetune_10pct/best_diffusers
 
-路线 B：dataset/latents/vae_daf_128_from_scratch.h5
-路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
-路线 B 10%：dataset/latents/vae_daf_128_from_scratch_10pct.h5
-路线 B 10%：vae/runs/vae_daf_from_scratch_10pct/best_diffusers
+Route B: dataset/latents/vae_daf_128_from_scratch.h5
+Route B: vae/runs/vae_daf_from_scratch/best_diffusers
+Route B 10%: dataset/latents/vae_daf_128_from_scratch_10pct.h5
+Route B 10%: vae/runs/vae_daf_from_scratch_10pct/best_diffusers
 ```
 
-## 路线 A：基于预训练 VAE 微调
+## Route A: Fine-Tune From A Pretrained VAE
 
 ```bash
-# 训练 latent GAN，读取路线 A 的 latent 缓存。
+# Train latent GAN on Route A latents.
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir gan/runs/latent_gan_finetune \
@@ -45,7 +45,7 @@ python gan/train.py \
   --patience 8 \
   --min-delta 1e-4
 
-# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
+# Generate 128 jpg images with the Route A VAE decoder.
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_finetune/best.pt \
   --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
@@ -54,10 +54,10 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-## 路线 A 10%：基于 10% 快速 VAE 微调
+## Route A 10%: Fine-Tune From The 10% Quick VAE
 
 ```bash
-# 训练 latent GAN，读取路线 A 10% 快速 VAE 的 latent 缓存。
+# Train latent GAN on Route A 10% latents.
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir gan/runs/latent_gan_finetune_10pct \
@@ -66,7 +66,7 @@ python gan/train.py \
   --patience 3 \
   --min-delta 1e-4
 
-# 生成 128 张 jpg 图片，使用路线 A 10% 快速 VAE decoder。
+# Generate 128 jpg images with the Route A 10% VAE decoder.
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_finetune_10pct/best.pt \
   --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
@@ -75,10 +75,10 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-## 路线 B：从零训练 VAE
+## Route B: Train The VAE From Scratch
 
 ```bash
-# 训练 latent GAN，读取路线 B 的 latent 缓存。
+# Train latent GAN on Route B latents.
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir gan/runs/latent_gan_from_scratch \
@@ -87,7 +87,7 @@ python gan/train.py \
   --patience 8 \
   --min-delta 1e-4
 
-# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
+# Generate 128 jpg images with the Route B VAE decoder.
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_from_scratch/best.pt \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
@@ -96,10 +96,10 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-## 路线 B 10%：基于 10% 快速从零 VAE
+## Route B 10%: From The 10% Quick Scratch VAE
 
 ```bash
-# 训练 latent GAN，读取路线 B 10% 快速 VAE 的 latent 缓存。
+# Train latent GAN on Route B 10% latents.
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir gan/runs/latent_gan_from_scratch_10pct \
@@ -108,7 +108,7 @@ python gan/train.py \
   --patience 3 \
   --min-delta 1e-4
 
-# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE decoder。
+# Generate 128 jpg images with the Route B 10% VAE decoder.
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_from_scratch_10pct/best.pt \
   --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
@@ -117,6 +117,6 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-采样默认使用 checkpoint 中的 EMA generator。
+Sampling uses the EMA generator from the checkpoint by default.
 
-GAN 的 early stopping 使用 `val_fake_score`，不是普通 MSE：全量路线使用 `--patience 8 --min-delta 1e-4`，10% 快速 VAE 路线使用 `--patience 3 --min-delta 1e-4`。
+GAN early stopping uses `val_fake_score`, not a plain MSE metric: full-data routes use `--patience 8 --min-delta 1e-4`, while 10% quick-VAE routes use `--patience 3 --min-delta 1e-4`.

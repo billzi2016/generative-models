@@ -1,40 +1,40 @@
 # flow_matching
 
-This directory implements `latent Flow Matching / Rectified Flow`.
+本目录实现 `latent Flow Matching / Rectified Flow`。
 
-The training objective is to learn a continuous-time velocity field in latent space:
+训练目标是学习 latent 空间中的连续时间速度场：
 
 ```text
 z_t = (1 - t) z_0 + t z_1
-v_theta(z_t, t) ~= z_1 - z_0
+v_theta(z_t, t) ≈ z_1 - z_0
 ```
 
-Here `z_1` comes from the VAE latent HDF5 cache and `z_0` is Gaussian noise.
+其中 `z_1` 来自 VAE latent HDF5，`z_0` 是高斯噪声。
 
-## Required Inputs
+## 依赖输入
 
 ```bash
 python vae/cache_latents.py
 ```
 
-The two VAE routes correspond to two sets of inputs:
+两条 VAE 路线对应两套输入：
 
 ```text
-Route A: dataset/latents/vae_daf_128_finetune.h5
-Route A: vae/runs/vae_daf_finetune/best_diffusers
-Route A 10%: dataset/latents/vae_daf_128_finetune_10pct.h5
-Route A 10%: vae/runs/vae_daf_finetune_10pct/best_diffusers
+路线 A：dataset/latents/vae_daf_128_finetune.h5
+路线 A：vae/runs/vae_daf_finetune/best_diffusers
+路线 A 10%：dataset/latents/vae_daf_128_finetune_10pct.h5
+路线 A 10%：vae/runs/vae_daf_finetune_10pct/best_diffusers
 
-Route B: dataset/latents/vae_daf_128_from_scratch.h5
-Route B: vae/runs/vae_daf_from_scratch/best_diffusers
-Route B 10%: dataset/latents/vae_daf_128_from_scratch_10pct.h5
-Route B 10%: vae/runs/vae_daf_from_scratch_10pct/best_diffusers
+路线 B：dataset/latents/vae_daf_128_from_scratch.h5
+路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
+路线 B 10%：dataset/latents/vae_daf_128_from_scratch_10pct.h5
+路线 B 10%：vae/runs/vae_daf_from_scratch_10pct/best_diffusers
 ```
 
-## Route A: Fine-Tune From A Pretrained VAE
+## 路线 A：基于预训练 VAE 微调
 
 ```bash
-# Train Flow Matching on Route A latents.
+# 训练 Flow Matching，读取路线 A 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir flow_matching/runs/latent_fm_finetune \
@@ -43,7 +43,7 @@ python flow_matching/train.py \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route A VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_finetune/best_model \
   --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
@@ -52,10 +52,10 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-## Route A 10%: Fine-Tune From The 10% Quick VAE
+## 路线 A 10%：基于 10% 快速 VAE 微调
 
 ```bash
-# Train Flow Matching on Route A 10% latents.
+# 训练 Flow Matching，读取路线 A 10% 快速 VAE 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir flow_matching/runs/latent_fm_finetune_10pct \
@@ -64,7 +64,7 @@ python flow_matching/train.py \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route A 10% VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 A 10% 快速 VAE decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_finetune_10pct/best_model \
   --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
@@ -73,10 +73,10 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-## Route B: Train The VAE From Scratch
+## 路线 B：从零训练 VAE
 
 ```bash
-# Train Flow Matching on Route B latents.
+# 训练 Flow Matching，读取路线 B 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir flow_matching/runs/latent_fm_from_scratch \
@@ -85,7 +85,7 @@ python flow_matching/train.py \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_from_scratch/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
@@ -94,10 +94,10 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-## Route B 10%: From The 10% Quick Scratch VAE
+## 路线 B 10%：基于 10% 快速从零 VAE
 
 ```bash
-# Train Flow Matching on Route B 10% latents.
+# 训练 Flow Matching，读取路线 B 10% 快速 VAE 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir flow_matching/runs/latent_fm_from_scratch_10pct \
@@ -106,7 +106,7 @@ python flow_matching/train.py \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B 10% VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_from_scratch_10pct/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
@@ -115,6 +115,6 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-Sampling uses Euler ODE integration with `50` steps by default.
+采样使用 Euler ODE 积分，默认 `50` 步。
 
-Early stopping is based on `val_loss`: full-data routes use `--patience 8 --min-delta 1e-4`, while 10% quick-VAE routes use `--patience 3 --min-delta 1e-4`.
+Early stopping 按 `val_loss` 判断：全量路线使用 `--patience 8 --min-delta 1e-4`，10% 快速 VAE 路线使用 `--patience 3 --min-delta 1e-4`。

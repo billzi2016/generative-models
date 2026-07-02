@@ -1,57 +1,58 @@
 # dataset
 
-## 目录用途
+## Purpose
 
-本目录用于存放当前项目的数据集文件、数据说明以及后续的数据整理约定。
+This directory stores dataset files, dataset notes, and local data conventions for this project.
 
-当前主路线围绕小型 `Stable Diffusion` 流程展开，因此数据集选择优先服务于：
+The current main line is a small `Stable Diffusion`-style pipeline, so dataset selection is driven by:
 
-- 动漫头像生成
-- `VAE -> latent diffusion` 流程
-- 优先保留较高质量的人脸/头部样本
+- anime face generation
+- a `VAE -> latent diffusion` workflow
+- keeping relatively high-quality face / head samples
 
-## 当前选定数据集
+## Current Dataset Choice
 
-当前优先使用 `DAF:re / DAFB` 路线的数据。
+The current preferred route is `DAF:re / DAFB`.
 
-选择原因：
+Why this choice:
 
-- 是别人已经整理过的动漫头像/头部数据，不是随意打包的小型民间压缩包
-- 来源与 `Danbooru` 路线相关，整体质量和一致性通常优于杂乱来源
-- 数量足够大，适合后续 `VAE` 和 latent diffusion 实验
+- it is a curated anime face / head dataset rather than an arbitrary small archive
+- it is tied to the `Danbooru` family of datasets, so quality and consistency are usually better than mixed-source collections
+- it is large enough for later `VAE` and latent diffusion experiments
 
-## 当前已确认的信息
+## Confirmed Facts
 
-- 数据集名称：`DAFB`
-- 上游背景：`DAF:re (DanbooruAnimeFaces:revamped)` 相关路线
-- 图像分辨率：`128x128`
-- 数据规模：
-  - 论文中的 `DAF:re Faces` 最终版本约 `463,437` 张图
-  - `Hugging Face` 上当前公开包名为 `daf.tar.gz`
-- `Hugging Face` 数据集页显示占用约 `13.34 GB`
+- dataset name: `DAFB`
+- upstream background: related to `DAF:re (DanbooruAnimeFaces:revamped)`
+- image resolution: `128x128`
+- scale:
+  - the final `DAF:re Faces` release in the paper has about `463,437` images
+  - the currently exposed package name on `Hugging Face` is `daf.tar.gz`
+- the `Hugging Face` dataset page shows roughly `13.34 GB`
 
-## 当前下载策略
+## Current Download Strategy
 
-当前不自己从全量 `Danbooru2021` 清洗，而是优先下载现成整理好的数据包。
+Instead of cleaning from full `Danbooru2021`, this project currently prefers downloading an already curated package.
 
-当前实际数据位置：
+Current local data layout:
 
 - `raw/fullMin256/`
 - `raw/train.csv`
 - `raw/train_val.csv`
 - `raw/classid_classname.csv`
 
-这样做的原因：
+Why:
 
-- 下载成本更可控
-- 可以尽快进入后续 `VAE` 与 `Stable Diffusion` 主流程
-- 先避免把时间耗在上游大规模清洗上
+- download cost is more controllable
+- we can move into the `VAE` and `Stable Diffusion` workflow faster
+- we avoid spending early project time on upstream large-scale cleaning
 
-## 当前目录约定
+## Directory Layout
 
 ```text
 dataset/
   README.md
+  README_CN.md
   raw/
     README.md
     classid_classname.csv
@@ -60,27 +61,27 @@ dataset/
     fullMin256/
 ```
 
-说明：
+Notes:
 
-- `raw/` 当前直接保存已解压后的 DAF 数据
-- `raw/README.md` 是上游数据集自带说明，保留进仓库；图片、CSV 等大体积数据仍作为本地数据文件处理
-- `raw/fullMin256/` 是当前 VAE 默认读取的图片目录
-- 训练代码会递归扫描 `raw/fullMin256/` 下的图片文件，不依赖单层目录结构
+- `raw/` currently stores the extracted DAF data directly
+- `raw/README.md` is the upstream dataset note and remains in the repo; images, CSV files, and other larger assets are still treated as local data files
+- `raw/fullMin256/` is the default image directory used by the VAE
+- training code scans images recursively under `raw/fullMin256/` and does not rely on a single flat directory
 
-## 与训练分辨率的关系
+## Relation To Training Resolution
 
-当前主线固定使用 `128x128` 作为 VAE 输入分辨率。
+The current main line fixes the VAE input resolution at `128x128`.
 
-当前建议是：
+Recommended setup:
 
-- 原始数据保留在 `dataset/raw/fullMin256/`
-- VAE 训练阶段统一 resize 到 `128x128`
-- 后续 latent 形状固定为 `[batch, 4, 16, 16]`
+- keep original data under `dataset/raw/fullMin256/`
+- resize to `128x128` during VAE training
+- keep later latent shape fixed at `[batch, 4, 16, 16]`
 
-## 后续补充内容
+## Future Notes
 
-后面会继续在本目录补充：
+More details will be added here later:
 
-- 解压方式
-- 训练/验证划分策略
-- 是否需要进一步过滤异常样本
+- extraction steps
+- train / validation split strategy
+- whether more abnormal-sample filtering is needed

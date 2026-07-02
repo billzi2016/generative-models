@@ -1,61 +1,59 @@
 # Generative Models
 
-This repository does not treat `VAE`, `DDPM`, `DiT`, and `Flow Matching` as isolated one-off implementations. The main line puts them under one small `Stable Diffusion`-style framework:
+本仓库的主线不是把 `VAE`、`DDPM`、`DiT`、`Flow Matching` 当成彼此割裂的方法分别实现，而是统一放在一个小型 `Stable Diffusion` 风格框架下：
 
 ```text
 image -> VAE latent -> latent generator -> VAE decoder -> image
 ```
 
-In other words, the main generative methods in this repo operate in the latent space produced by a shared `VAE`. The main difference is which method is used for the middle `latent generator`.
+也就是说，本仓库里的主要生成方法默认都运行在 `VAE` 产生的 latent 空间中。差异主要在于中间的 `latent generator` 用什么方法实现。
 
-Chinese documentation is kept in `README_CN.md`.
+## 核心结论
 
-## Core Takeaways
+- `VAE` 负责把 `128x128` 图片压缩到 `[4, 16, 16]` latent。
+- `DDPM`、`DiT`、`Flow Matching` 等方法都可以吃同一个 VAE latent。
+- `Stable Diffusion` 在本仓库中表示一种工程范式：`VAE latent + 生成模型 + decoder`。
+- 具体生成模型可以有不同实现：latent DDPM、latent DiT、latent Flow Matching、latent Schrödinger Bridge 等。
+- 能用成熟库就用成熟库，优先 `diffusers`、`accelerate` 和 PyTorch 原生组件，不优先手写核心模型。
 
-- `VAE` compresses `128x128` images into `[4, 16, 16]` latents.
-- `DDPM`, `DiT`, `Flow Matching`, and related methods can all consume the same VAE latent format.
-- `Stable Diffusion` in this repo means an engineering pattern: `VAE latent + generative model + decoder`.
-- The latent generator can have different implementations: latent DDPM, latent DiT, latent Flow Matching, latent Schrödinger Bridge, and so on.
-- When a mature library exists, use it. Prioritize `diffusers`, `accelerate`, and native PyTorch components over hand-written core models.
-
-## High-Level Pipeline
+## 总路径图
 
 ```mermaid
 flowchart TD
-    A[Raw anime portrait image<br/>3 x 128 x 128] --> B[VAE Encoder<br/>Diffusers AutoencoderKL]
-    B --> C[Shared latent space<br/>4 x 16 x 16]
+    A[原始动漫头像图片<br/>3 x 128 x 128] --> B[VAE Encoder<br/>Diffusers AutoencoderKL]
+    B --> C[统一 latent 空间<br/>4 x 16 x 16]
 
     C --> D1[latent DDPM<br/>U-Net + scheduler]
     C --> D2[latent DiT<br/>Transformer diffusion]
     C --> D3[latent Flow Matching<br/>ODE velocity field]
     C --> D4[latent Schrödinger Bridge<br/>stochastic bridge]
-    C --> D5[latent interpolation<br/>VAE morph GIF]
+    C --> D5[latent interpolation<br/>VAE 变脸 GIF]
 
-    D1 --> E[Generated latent<br/>4 x 16 x 16]
+    D1 --> E[生成 latent<br/>4 x 16 x 16]
     D2 --> E
     D3 --> E
     D4 --> E
     D5 --> E
 
     E --> F[VAE Decoder<br/>Diffusers AutoencoderKL]
-    F --> G[Generated image<br/>3 x 128 x 128]
+    F --> G[生成图片<br/>3 x 128 x 128]
 ```
 
-## Theory
+## 理论说明
 
-For a fuller discussion of method relationships, equations, and comparisons, see:
+更完整的理论关系、公式和方法对比见：
 
 ```text
 THEORY.md
 ```
 
-## Directory Roles
+## 目录定位
 
 ```text
 dataset/
 ```
 
-Dataset notes and local data conventions. The current default data directory is:
+数据集说明和本地数据约定。当前默认数据目录是：
 
 ```text
 dataset/raw/fullMin256
@@ -65,13 +63,13 @@ dataset/raw/fullMin256
 vae/
 ```
 
-The shared latent interface. The current implementation uses Diffusers `AutoencoderKL`, with default pretrained weights:
+统一 latent 接口。当前使用 Diffusers `AutoencoderKL`，默认权重为：
 
 ```text
 stabilityai/sd-vae-ft-mse
 ```
 
-Core shape:
+核心形状：
 
 ```text
 [B, 3, 128, 128] -> [B, 4, 16, 16]
@@ -81,83 +79,83 @@ Core shape:
 ddpm/
 ```
 
-The latent DDPM route. It does not diffuse directly in pixel space; it trains a denoising model in VAE latent space.
+latent DDPM 路线。不是直接在像素空间扩散，而是默认在 VAE latent 空间中训练去噪模型。
 
 ```text
 dit/
 ```
 
-The latent DiT route. Compared with DDPM, the main difference is swapping the U-Net backbone for a Transformer backbone.
+latent DiT 路线。和 DDPM 的差别主要是 backbone 从 U-Net 换成 Transformer。
 
 ```text
 flow_matching/
 ```
 
-The latent Flow Matching route. It learns a continuous-time ODE velocity field in the same shared VAE latent space.
+latent Flow Matching 路线。目标是在同一个 VAE latent 空间中学习连续时间 ODE 速度场。
 
 ```text
 vis-flow-matching/
 ```
 
-A standalone MNIST Flow Matching visualization project. It does not depend on the VAE latent pipeline. Instead, it demonstrates:
+独立的 MNIST Flow Matching 可视化项目。它不依赖 VAE latent，用 `28x28` MNIST 直接演示：
 
 ```text
-Gaussian noise -> ODE flow -> 0..9 handwritten digit GIF
+高斯噪声 -> ODE flow -> 0..9 手写数字 GIF
 ```
 
-This is useful for understanding Flow Matching formulas, velocity-field training, and sampling trajectories directly. Run instructions are in:
+适合用来理解 Flow Matching 的核心公式、速度场训练和采样轨迹。运行说明见：
 
 ```text
-vis-flow-matching/README.md
+vis-flow-matching/README_CN.md
 ```
 
 ```text
 vis-2d-flowmatching/
 ```
 
-A standalone 2D Flow Matching visualization project. It does not use VAE latents. Instead, it shows how points move along a learned velocity field toward a target distribution:
+独立的二维 Flow Matching 可视化项目。它不依赖 VAE latent，直接在二维点云上展示点如何沿速度场移动到目标分布：
 
 ```text
 Gaussian noise -> ODE flow -> ring / moons
 ```
 
-The project generates trajectory GIFs and vector-field plots. Run instructions are in:
+项目会生成轨迹 GIF 和速度场风向图，运行说明见：
 
 ```text
-vis-2d-flowmatching/README.md
+vis-2d-flowmatching/README_CN.md
 ```
 
-Visualization preview:
+可视化预览：
 
-MNIST conditional Flow Matching sampling animation: each column corresponds to digit `0..9`, each row is a different random sample, and the animation shows Gaussian noise gradually flowing into handwritten digits.
+MNIST 条件 Flow Matching 采样动画：每列对应数字 `0..9`，每行是不同随机样本，展示从高斯噪声逐步流动成手写数字的过程。
 
 ![MNIST Flow Matching](vis-flow-matching/runs/mnist_flow/mnist_flow_10x6.gif)
 
-MNIST training curve: the x-axis is epoch and the y-axis is loss, used to inspect whether training and validation errors decrease steadily.
+MNIST 训练曲线：横轴是 epoch，纵轴是 loss，用来观察训练和验证误差是否稳定下降。
 
 ![MNIST Metrics](vis-flow-matching/runs/mnist_flow/metrics.jpg)
 
-Ring sampling animation: 2D points start from Gaussian noise and move along the learned velocity field toward a ring distribution.
+Ring 采样动画：二维点从高斯噪声出发，沿 learned velocity field 逐步移动到圆环分布。
 
 ![Ring Flow](vis-2d-flowmatching/runs/ring/ring_flow.gif)
 
-Ring vector field: shows the direction of the 2D velocity field at `t=0.0`, `t=0.5`, and `t=1.0`.
+Ring 风向图：展示 `t=0.0`、`t=0.5`、`t=1.0` 三个时间点上的二维速度场方向。
 
 ![Ring Vector Field](vis-2d-flowmatching/runs/ring/ring_vector_field.jpg)
 
-Ring training curve: used to judge whether the 2D ring experiment is converging.
+Ring 训练曲线：用于判断二维圆环实验的优化过程是否收敛。
 
 ![Ring Metrics](vis-2d-flowmatching/runs/ring/metrics.jpg)
 
-Moons sampling animation: 2D points gradually flow from Gaussian noise to the two-moons target distribution.
+Moons 采样动画：二维点从高斯噪声逐步流动到双半圆目标分布。
 
 ![Moons Flow](vis-2d-flowmatching/runs/moons/moons_flow.gif)
 
-Moons vector field: shows the velocity-field structure of the two-moons experiment at different time slices.
+Moons 风向图：展示双半圆实验在不同时间切片下的速度场结构。
 
 ![Moons Vector Field](vis-2d-flowmatching/runs/moons/moons_vector_field.jpg)
 
-Moons training curve: used to inspect the loss trend and convergence stability of the two-moons experiment.
+Moons 训练曲线：用于检查双半圆实验的 loss 下降趋势和收敛稳定性。
 
 ![Moons Metrics](vis-2d-flowmatching/runs/moons/metrics.jpg)
 
@@ -165,30 +163,30 @@ Moons training curve: used to inspect the loss trend and convergence stability o
 gan/
 ```
 
-Baseline generative-model directory. GAN can serve as a comparison baseline and can also support later latent-GAN experiments, but it is not the current main-line priority.
+生成模型基线目录。GAN 可以作为横向对比，也可以后续尝试 latent GAN，但不是当前主线优先级。
 
-## The VAE Is The Shared Interface
+## VAE 是统一接口
 
-All main-line methods share one VAE latent interface:
+后续所有主线方法优先共享同一个 VAE latent：
 
 ```text
 latent shape = [batch, 4, 16, 16]
 ```
 
-Why this is useful:
+这样做的原因：
 
-- each method avoids inventing a different input / output format, which keeps comparison cleaner
-- DDPM, DiT, Flow Matching, and related methods can be compared on generation mechanics rather than representation mismatch
-- the same decoder can be reused so all sampled results map back into the same image space
-- this is much closer to an actual Stable Diffusion-style engineering layout
+- 避免每个方法各自定义输入输出，后续难以横向对比。
+- 让 DDPM、DiT、Flow Matching 等方法只比较生成机制本身。
+- 复用同一个 decoder，采样结果都能还原到同一图片空间。
+- 更接近 Stable Diffusion 的工程结构。
 
-## Recommended Run Order
+## 推荐运行顺序
 
-### 1. Prepare The VAE
+### 1. 准备 VAE
 
-There are two VAE routes. Pick one.
+VAE 有两条路线，二选一。
 
-Route A: download a pretrained VAE and fine-tune it on DAF.
+路线 A：下载别人训练好的 VAE，然后在 DAF 上微调。
 
 ```bash
 python vae/download_pretrained.py \
@@ -210,7 +208,7 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
-If full-data fine-tuning is too slow, first validate the training workflow on a fixed-random `10%` subset of valid images:
+如果全量微调太慢，可以先用固定随机 `10%` valid 图片验证训练流程：
 
 ```bash
 python vae/train_vae.py \
@@ -228,7 +226,7 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
-Route B: start from a random-initialized Diffusers `AutoencoderKL` and train your own VAE.
+路线 B：不用别人权重，从 Diffusers `AutoencoderKL` 架构随机初始化，训练自己的 VAE。
 
 ```bash
 python vae/train_vae.py \
@@ -244,7 +242,7 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
-Route B can also be validated first on a fixed-random `10%` subset of valid images:
+路线 B 也可以先用固定随机 `10%` valid 图片验证从零训练流程：
 
 ```bash
 python vae/train_vae.py \
@@ -262,41 +260,41 @@ python vae/train_vae.py \
   --max-epoch-checkpoints 10
 ```
 
-The two routes use different output directories so they do not overwrite one another:
+两条路线的输出目录不同，避免互相覆盖：
 
 ```text
-Route A: vae/runs/vae_daf_finetune/best_diffusers
-Route B: vae/runs/vae_daf_from_scratch/best_diffusers
+路线 A：vae/runs/vae_daf_finetune/best_diffusers
+路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
 ```
 
-Both routes use the same data-processing and validation logic:
+两条路线使用同一套数据处理和验证集逻辑：
 
-- scan `dataset/raw/fullMin256` first, filter bad images, and get the valid-image list
-- if `--dataset-fraction 0.1 --seed 42` is passed, sample a fixed random `10%` subset from valid images
-- split into train / validation according to `--val-ratio`
-- `train` updates VAE weights and `val` selects `best_diffusers/`
-- the only difference between Route A and Route B is initialization: Route A starts from a pretrained VAE and Route B starts from random weights
-- full-data commands explicitly use early stopping `--patience 8 --min-delta 1e-4`, while the 10% quick-validation commands explicitly use `--patience 3 --min-delta 1e-4`
+- 先扫描 `dataset/raw/fullMin256`，过滤坏图，得到 valid 图片列表。
+- 如果传 `--dataset-fraction 0.1 --seed 42`，就在 valid 图片里固定随机抽 `10%`。
+- 然后再按 `--val-ratio` 划分 train / val。
+- `train` 用于更新 VAE 权重，`val` 用于选择 `best_diffusers/`。
+- 路线 A 和路线 B 的区别只在初始化：A 从预训练 VAE 微调，B 从随机权重开始训练。
+- 全量训练命令显式使用 early stopping：`--patience 8 --min-delta 1e-4`；10% 快速验证命令显式使用 `--patience 3 --min-delta 1e-4`。
 
-VAE training and latent caching both scan images at startup:
+VAE 训练和 latent 缓存启动时都会扫描图片：
 
-- default `--scan-workers 8` with a `tqdm` progress bar
-- scanning generates `dataset/valid_images.txt` and `dataset/bad_images.txt`
-- each run rescans so dataset changes or interrupted runs do not leave stale lists
-- if the scan result is unchanged, the list files are not rewritten, reducing unnecessary SSD writes
-- `--dataset-fraction 0.1 --seed 42` samples a fixed random `10%` subset after bad-image scanning completes; the default `1.0` means full-data training
+- 默认 `--scan-workers 8`，带 `tqdm` 进度条。
+- 扫描会生成 `dataset/valid_images.txt` 和 `dataset/bad_images.txt`。
+- 每次启动都会重新扫描，避免数据集变化或上次中断后沿用旧清单。
+- 如果扫描结果没变化，不会重写清单文件，减少无意义 SSD 写入。
+- `--dataset-fraction 0.1 --seed 42` 会在完成坏图扫描后，从 valid 图片中固定随机抽样 `10%`；默认 `1.0` 是全量训练。
 
-By default the process only guarantees saving `best_diffusers/`, rather than keeping unlimited checkpoints. More details are in:
+默认只强制保存 `best_diffusers/`，不会无限保存 checkpoint。更细节见：
 
 ```text
 vae/dataset_treatment.md
 ```
 
-### 2. Cache The Full Latent Set
+### 2. 缓存全量 latent
 
-Once the best VAE is chosen, encode the full image set into a single HDF5 file.
+VAE best 确定后，把全量图片 encode 成单个 HDF5 文件。
 
-Route A:
+路线 A：
 
 ```bash
 python vae/cache_latents.py \
@@ -305,7 +303,7 @@ python vae/cache_latents.py \
   --output dataset/latents/vae_daf_128_finetune.h5
 ```
 
-Route A 10% quick VAE:
+路线 A 的 10% 快速 VAE：
 
 ```bash
 python vae/cache_latents.py \
@@ -314,7 +312,7 @@ python vae/cache_latents.py \
   --output dataset/latents/vae_daf_128_finetune_10pct.h5
 ```
 
-Route B:
+路线 B：
 
 ```bash
 python vae/cache_latents.py \
@@ -323,7 +321,7 @@ python vae/cache_latents.py \
   --output dataset/latents/vae_daf_128_from_scratch.h5
 ```
 
-Route B 10% quick VAE:
+路线 B 的 10% 快速 VAE：
 
 ```bash
 python vae/cache_latents.py \
@@ -332,57 +330,57 @@ python vae/cache_latents.py \
   --output dataset/latents/vae_daf_128_from_scratch_10pct.h5
 ```
 
-The outputs are:
+输出分别是：
 
 ```text
-Route A: dataset/latents/vae_daf_128_finetune.h5
-Route A 10% quick VAE: dataset/latents/vae_daf_128_finetune_10pct.h5
-Route B: dataset/latents/vae_daf_128_from_scratch.h5
-Route B 10% quick VAE: dataset/latents/vae_daf_128_from_scratch_10pct.h5
+路线 A：dataset/latents/vae_daf_128_finetune.h5
+路线 A 10% 快速 VAE：dataset/latents/vae_daf_128_finetune_10pct.h5
+路线 B：dataset/latents/vae_daf_128_from_scratch.h5
+路线 B 10% 快速 VAE：dataset/latents/vae_daf_128_from_scratch_10pct.h5
 ```
 
-The HDF5 stores `float16` latents that have already been multiplied by `vae.config.scaling_factor`, with default gzip compression level `1`. Here `10%` means the VAE itself was trained on 10% of the valid images; `cache_latents.py` still encodes all currently valid images from the data directory into HDF5 by default.
+HDF5 中保存的是乘过 `vae.config.scaling_factor` 的 `float16` latent，默认 gzip 压缩等级为 `1`。这里的 `10%` 指 VAE 是用 10% valid 图片训练出来的；`cache_latents.py` 默认仍会把当前数据目录的全量 valid 图片 encode 进 HDF5。
 
-### 3. Train One Or More Latent Generators
+### 3. 训练不同 latent generator
 
-Pick one or more methods to train. The concrete commands are listed in the next section, `Training And Sampling By Method`.
+选择一个或多个方法训练。具体命令见下一节“各方法训练与生成”。
 
-Different VAE routes read different latent caches:
+不同 VAE 路线读取不同 latent 缓存：
 
 ```text
-Route A: dataset/latents/vae_daf_128_finetune.h5
-Route A 10% quick VAE: dataset/latents/vae_daf_128_finetune_10pct.h5
-Route B: dataset/latents/vae_daf_128_from_scratch.h5
-Route B 10% quick VAE: dataset/latents/vae_daf_128_from_scratch_10pct.h5
+路线 A：dataset/latents/vae_daf_128_finetune.h5
+路线 A 10% 快速 VAE：dataset/latents/vae_daf_128_finetune_10pct.h5
+路线 B：dataset/latents/vae_daf_128_from_scratch.h5
+路线 B 10% 快速 VAE：dataset/latents/vae_daf_128_from_scratch_10pct.h5
 ```
 
-### 4. Sample Images
+### 4. 采样生成图片
 
-After training finishes, run the matching sample command to generate images. The exact commands are also in the next section.
+训练完成后，使用对应方法的 sample 命令生成图片。具体命令同样见下一节“各方法训练与生成”。
 
-Notes:
+说明：
 
-- later-stage methods do not reread the raw images or rerun the VAE encoder by default
-- later-stage methods all read from HDF5 latent caches by default
-- `runs/` outputs for the methods are ignored by `.gitignore`
-- training appends `metrics.csv` and overwrites `metrics.jpg` in each method's `output-dir`, using JPG format and `dpi=200`
-- DDPM, DiT, and Flow Matching use `val_loss` for early stopping; GAN uses `val_fake_score`. Full-data routes use `--patience 8 --min-delta 1e-4`, while 10% quick-VAE routes use `--patience 3 --min-delta 1e-4`
+- 后续方法默认不重复读取原图，也不重复运行 VAE encoder。
+- 后续方法默认读取同一个 HDF5 latent 缓存。
+- 各方法的 `runs/` 输出都被 `.gitignore` 忽略。
+- 训练过程会在各自 `output-dir` 下追加 `metrics.csv`，并实时覆盖保存 `metrics.jpg`，图片格式为 JPG，`dpi=200`。
+- DDPM / DiT / Flow Matching 的 early stopping 按 `val_loss` 判断；GAN 按 `val_fake_score` 判断。全量路线命令使用 `--patience 8 --min-delta 1e-4`，10% 快速 VAE 路线命令使用 `--patience 3 --min-delta 1e-4`。
 
-## Training And Sampling By Method
+## 各方法训练与生成
 
 ### DDPM
 
-Route A:
+路线 A：
 
 ```bash
-# Train DDPM on Route A latent cache.
+# 训练 DDPM，读取路线 A 的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir ddpm/runs/latent_ddpm_finetune \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route A VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python ddpm/sample.py \
   --model-dir ddpm/runs/latent_ddpm_finetune/best_model \
   --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
@@ -391,17 +389,17 @@ python ddpm/sample.py \
   --image-format jpg
 ```
 
-Route A 10% quick VAE:
+路线 A 10% 快速 VAE：
 
 ```bash
-# Train DDPM on the 10% quick-VAE latent cache.
+# 训练 DDPM，读取 10% 快速 VAE 生成的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir ddpm/runs/latent_ddpm_finetune_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python ddpm/sample.py \
   --model-dir ddpm/runs/latent_ddpm_finetune_10pct/best_model \
   --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
@@ -410,17 +408,17 @@ python ddpm/sample.py \
   --image-format jpg
 ```
 
-Route B:
+路线 B：
 
 ```bash
-# Train DDPM on Route B latent cache.
+# 训练 DDPM，读取路线 B 的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir ddpm/runs/latent_ddpm_from_scratch \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python ddpm/sample.py \
   --model-dir ddpm/runs/latent_ddpm_from_scratch/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
@@ -429,17 +427,17 @@ python ddpm/sample.py \
   --image-format jpg
 ```
 
-Route B 10% quick VAE:
+路线 B 10% 快速 VAE：
 
 ```bash
-# Train DDPM on the Route B 10% quick-VAE latent cache.
+# 训练 DDPM，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python ddpm/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir ddpm/runs/latent_ddpm_from_scratch_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python ddpm/sample.py \
   --model-dir ddpm/runs/latent_ddpm_from_scratch_10pct/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
@@ -450,17 +448,17 @@ python ddpm/sample.py \
 
 ### DiT
 
-Route A:
+路线 A：
 
 ```bash
-# Train DiT on Route A latent cache.
+# 训练 DiT，读取路线 A 的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir dit/runs/latent_dit_finetune \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route A VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python dit/sample.py \
   --model-dir dit/runs/latent_dit_finetune/best_model \
   --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
@@ -469,17 +467,17 @@ python dit/sample.py \
   --image-format jpg
 ```
 
-Route A 10% quick VAE:
+路线 A 10% 快速 VAE：
 
 ```bash
-# Train DiT on the 10% quick-VAE latent cache.
+# 训练 DiT，读取 10% 快速 VAE 生成的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir dit/runs/latent_dit_finetune_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python dit/sample.py \
   --model-dir dit/runs/latent_dit_finetune_10pct/best_model \
   --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
@@ -488,17 +486,17 @@ python dit/sample.py \
   --image-format jpg
 ```
 
-Route B:
+路线 B：
 
 ```bash
-# Train DiT on Route B latent cache.
+# 训练 DiT，读取路线 B 的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir dit/runs/latent_dit_from_scratch \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python dit/sample.py \
   --model-dir dit/runs/latent_dit_from_scratch/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
@@ -507,17 +505,17 @@ python dit/sample.py \
   --image-format jpg
 ```
 
-Route B 10% quick VAE:
+路线 B 10% 快速 VAE：
 
 ```bash
-# Train DiT on the Route B 10% quick-VAE latent cache.
+# 训练 DiT，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python dit/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir dit/runs/latent_dit_from_scratch_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python dit/sample.py \
   --model-dir dit/runs/latent_dit_from_scratch_10pct/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
@@ -528,17 +526,17 @@ python dit/sample.py \
 
 ### Flow Matching
 
-Route A:
+路线 A：
 
 ```bash
-# Train Flow Matching on Route A latent cache.
+# 训练 Flow Matching，读取路线 A 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir flow_matching/runs/latent_fm_finetune \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route A VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_finetune/best_model \
   --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
@@ -547,17 +545,17 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-Route A 10% quick VAE:
+路线 A 10% 快速 VAE：
 
 ```bash
-# Train Flow Matching on the 10% quick-VAE latent cache.
+# 训练 Flow Matching，读取 10% 快速 VAE 生成的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir flow_matching/runs/latent_fm_finetune_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_finetune_10pct/best_model \
   --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
@@ -566,17 +564,17 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-Route B:
+路线 B：
 
 ```bash
-# Train Flow Matching on Route B latent cache.
+# 训练 Flow Matching，读取路线 B 的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir flow_matching/runs/latent_fm_from_scratch \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_from_scratch/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
@@ -585,17 +583,17 @@ python flow_matching/sample.py \
   --image-format jpg
 ```
 
-Route B 10% quick VAE:
+路线 B 10% 快速 VAE：
 
 ```bash
-# Train Flow Matching on the Route B 10% quick-VAE latent cache.
+# 训练 Flow Matching，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python flow_matching/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir flow_matching/runs/latent_fm_from_scratch_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python flow_matching/sample.py \
   --model-dir flow_matching/runs/latent_fm_from_scratch_10pct/best_model \
   --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
@@ -606,17 +604,17 @@ python flow_matching/sample.py \
 
 ### GAN
 
-Route A:
+路线 A：
 
 ```bash
-# Train latent GAN on Route A latent cache.
+# 训练 latent GAN，读取路线 A 的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune.h5 \
   --output-dir gan/runs/latent_gan_finetune \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route A VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 A 的 VAE decoder。
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_finetune/best.pt \
   --vae-dir vae/runs/vae_daf_finetune/best_diffusers \
@@ -625,17 +623,17 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-Route A 10% quick VAE:
+路线 A 10% 快速 VAE：
 
 ```bash
-# Train latent GAN on the 10% quick-VAE latent cache.
+# 训练 latent GAN，读取 10% 快速 VAE 生成的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
   --output-dir gan/runs/latent_gan_finetune_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用 10% 快速 VAE 的 decoder。
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_finetune_10pct/best.pt \
   --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
@@ -644,17 +642,17 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-Route B:
+路线 B：
 
 ```bash
-# Train latent GAN on Route B latent cache.
+# 训练 latent GAN，读取路线 B 的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch.h5 \
   --output-dir gan/runs/latent_gan_from_scratch \
   --patience 8 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 的 VAE decoder。
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_from_scratch/best.pt \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
@@ -663,17 +661,17 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-Route B 10% quick VAE:
+路线 B 10% 快速 VAE：
 
 ```bash
-# Train latent GAN on the Route B 10% quick-VAE latent cache.
+# 训练 latent GAN，读取路线 B 10% 快速 VAE 生成的 latent 缓存。
 python gan/train.py \
   --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
   --output-dir gan/runs/latent_gan_from_scratch_10pct \
   --patience 3 \
   --min-delta 1e-4
 
-# Generate 128 jpg images with the Route B 10% quick-VAE decoder.
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE 的 decoder。
 python gan/sample.py \
   --checkpoint gan/runs/latent_gan_from_scratch_10pct/best.pt \
   --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
@@ -682,42 +680,42 @@ python gan/sample.py \
   --image-format jpg
 ```
 
-## Tests
+## 测试
 
-Test scripts live in:
+测试脚本放在：
 
 ```text
 test/
 ```
 
-Run:
+运行：
 
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-Or:
+或者：
 
 ```bash
 bash test/run_dry_tests.sh
 ```
 
-These tests only cover syntax, model forward-pass shape checks, small HDF5 read / write checks, and dry-run level validation. They do not run real training or write large checkpoints.
+这些测试只做语法、模型前向、HDF5 小样本读写和 dry-run 级验证，不运行真实训练，不写大 checkpoint。
 
-## VAE Interpolation
+## VAE 插值
 
-The VAE itself can create a smooth transition between two images without DDPM or diffusion:
+VAE 本身也可以做两张图之间的平滑过渡，不需要 DDPM 或 diffusion：
 
 ![VAE latent interpolation](vae/runs/interpolation_pretrained.gif)
 
 ```text
 image A -> encoder -> latent A
 image B -> encoder -> latent B
-interpolate between latent A and latent B
-interpolated latent -> decoder -> GIF
+latent A/B 插值
+插值 latent -> decoder -> GIF
 ```
 
-The corresponding script:
+对应脚本：
 
 ```bash
 python vae/interpolate_gif.py \
@@ -726,7 +724,7 @@ python vae/interpolate_gif.py \
   --output vae/runs/interpolation_pretrained.gif
 ```
 
-If `--vae` is not provided, the default model is `stabilityai/sd-vae-ft-mse`. To use your own fine-tuned VAE:
+不传 `--vae` 时，默认使用 `stabilityai/sd-vae-ft-mse`。如果要用自己微调后的 VAE：
 
 ```bash
 python vae/interpolate_gif.py \
@@ -736,10 +734,10 @@ python vae/interpolate_gif.py \
   --output vae/runs/interpolation_finetune.gif
 ```
 
-## Implementation Principles
+## 当前实现原则
 
-- do not prioritize hand-written VAE, U-Net, scheduler, or other core components
-- prefer mature implementations such as `diffusers.AutoencoderKL`
-- assume Apple Silicon `MPS` by default when available
-- project code mainly handles paths, data, training entry points, logging, checkpoints, and method-specific sampling scripts
-- if a module must be custom-built, the reason and risk should be stated first
+- 不优先手写 VAE、U-Net、scheduler 等核心组件。
+- 优先复用 `diffusers.AutoencoderKL` 等成熟库实现。
+- 默认考虑 Apple Silicon `MPS`。
+- 自己写的代码主要做路径、数据、训练入口、日志、checkpoint 和各方法自己的采样生成脚本。
+- 如果某个模块必须自定义实现，需要先说明原因和风险。

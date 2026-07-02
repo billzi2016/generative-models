@@ -1,22 +1,22 @@
 # vis-flow-matching
 
-本目录是一个独立的 MNIST Flow Matching 可视化 demo，用来把理论公式直接落到动态图上。
+This directory is a standalone MNIST Flow Matching visualization demo. The goal is to turn the theory into an animation you can inspect directly.
 
-目标效果：
+Target behavior:
 
 ```text
-高斯噪声 x0 -> ODE flow -> MNIST 数字 x1
+Gaussian noise x0 -> ODE flow -> MNIST digit x1
 ```
 
-生成 GIF 默认是 `10` 列 `x` `6` 行：
+The generated GIF uses `10` columns by `6` rows by default:
 
-- 每列对应一个数字类别 `0..9`。
-- 每行是同一类别的不同随机样本。
-- 动画展示从高斯噪声到清晰数字的 Flow Matching 采样轨迹。
+- each column corresponds to one digit class `0..9`
+- each row is a different random sample from the same class
+- the animation shows the Flow Matching sampling trajectory from Gaussian noise to a clean digit
 
-## 算法
+## Algorithm
 
-训练使用最基础的 Rectified Flow / Flow Matching 目标：
+Training uses the most basic Rectified Flow / Flow Matching objective:
 
 ```text
 x0 ~ N(0, I)
@@ -28,15 +28,15 @@ v_theta = model(xt, t, label)
 loss = MSE(v_theta, v_target)
 ```
 
-采样时从噪声开始做 Euler ODE 积分：
+Sampling starts from noise and uses Euler ODE integration:
 
 ```text
 dx / dt = v_theta(x, t, label)
 ```
 
-## 训练
+## Training
 
-默认会通过 `torchvision.datasets.MNIST(download=True)` 下载 MNIST 到 `dataset/torchvision`。
+By default `torchvision.datasets.MNIST(download=True)` downloads MNIST into `dataset/torchvision`.
 
 ```bash
 python vis-flow-matching/train.py \
@@ -50,9 +50,9 @@ python vis-flow-matching/train.py \
   --seed 42
 ```
 
-Mac 上会优先使用 `mps`，否则用 `cuda` 或 `cpu`。训练使用 MNIST 官方 `train=True` 训练集，使用官方 `train=False` test set 作为验证集并按 `val_loss` 保存 `best.pt`；默认最多跑 `100` 个 epoch，但 `val_loss` 连续 `3` 个 epoch 没有超过 `1e-4` 的有效改善就 early stop。
+On Mac, the script prefers `mps`, otherwise it falls back to `cuda` or `cpu`. Training uses the official MNIST `train=True` split for training and the official `train=False` test split for validation, saving `best.pt` according to `val_loss`. The maximum is `100` epochs, but training stops early if `val_loss` fails to improve by more than `1e-4` for `3` consecutive epochs.
 
-输出：
+Outputs:
 
 ```text
 vis-flow-matching/runs/mnist_flow/best.pt
@@ -61,15 +61,15 @@ vis-flow-matching/runs/mnist_flow/metrics.csv
 vis-flow-matching/runs/mnist_flow/metrics.jpg
 ```
 
-每个 epoch 结束后都会追加 `metrics.csv`，并覆盖保存一次 `metrics.jpg`。图里的标题和坐标标签全部使用英文，避免 matplotlib 中文字体缺失导致显示异常。
+At the end of every epoch, the script appends to `metrics.csv` and overwrites `metrics.jpg`. Titles and axis labels stay in English to avoid matplotlib Chinese-font issues.
 
-默认只保存 `best.pt` 和 `last.pt`。如果需要保留周期 checkpoint，再显式传：
+By default only `best.pt` and `last.pt` are kept. If you want periodic checkpoints, pass this explicitly:
 
 ```bash
 --checkpoint-every-epochs 10
 ```
 
-## 生成 10x6 GIF
+## Generate The 10x6 GIF
 
 ```bash
 python vis-flow-matching/make_gif.py \
@@ -82,22 +82,26 @@ python vis-flow-matching/make_gif.py \
   --seed 42
 ```
 
-输出：
+Output:
 
 ```text
 vis-flow-matching/runs/mnist_flow/mnist_flow_10x6.gif
 ```
 
-## 可视化
+## Visualization
+
+MNIST conditional Flow Matching sampling animation: each column corresponds to digit `0..9`, each row is a different random sample in that class, and the animation shows how Gaussian noise gradually flows into readable handwritten digits.
 
 ![MNIST Flow Matching](runs/mnist_flow/mnist_flow_10x6.gif)
 
+Training curve: the x-axis is epoch and the y-axis is loss, used to inspect whether training and validation errors are decreasing steadily and whether early stopping triggers at a reasonable point.
+
 ![MNIST Metrics](runs/mnist_flow/metrics.jpg)
 
-## 文件说明
+## File Notes
 
-- `model.py`：极简 class-conditional U-Net，输入 `x_t, t, label`，输出速度场。
-- `train.py`：训练 MNIST Flow Matching。
-- `make_gif.py`：用训练好的 checkpoint 生成 10 列 6 行 GIF。
+- `model.py`: a compact class-conditional U-Net, taking `x_t, t, label` and predicting the velocity field
+- `train.py`: train MNIST Flow Matching
+- `make_gif.py`: generate the `10 x 6` GIF from a trained checkpoint
 
-展示用的 GIF 和 JPG 会提交到 git；checkpoint、CSV 和 config 仍然不提交。
+The demo GIF and JPG are committed to git. Checkpoints, CSV files, and config files are still ignored.

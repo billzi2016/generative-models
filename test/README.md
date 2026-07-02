@@ -1,37 +1,37 @@
 # test
 
-本目录放仓库级 dry-run / unittest。
+This directory stores repository-level dry-run tests and unit tests.
 
-测试目标：
+Test goals:
 
-- 验证 Python 文件语法正确。
-- 验证 HDF5 latent 读写逻辑。
-- 验证 DDPM / DiT / Flow Matching / GAN 的模型前向 shape。
-- 验证脚本不会依赖真实 DAF 大数据才能完成基础检查。
+- verify Python file syntax
+- verify HDF5 latent read / write logic
+- verify forward-pass tensor shapes for DDPM / DiT / Flow Matching / GAN
+- verify scripts can pass basic checks without requiring the full DAF dataset
 
-测试不做的事情：
+What these tests do not do:
 
-- 不跑真实训练。
-- 不下载模型权重。
-- 不写大 checkpoint。
-- 不读取 `dataset/raw/fullMin256` 全量图片。
+- run real training
+- download model weights
+- write large checkpoints
+- read the full `dataset/raw/fullMin256` image tree
 
-## 运行方式
+## How To Run
 
 ```bash
 python -m unittest discover -s test -p "test_*.py"
 ```
 
-或者：
+Or:
 
 ```bash
 bash test/run_dry_tests.sh
 ```
 
-测试临时文件写入：
+Temporary test files are written to:
 
 ```text
 test/tmp/
 ```
 
-该目录已加入 `.gitignore`。
+That directory is already included in `.gitignore`.

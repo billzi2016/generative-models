@@ -1,23 +1,23 @@
 # vis-2d-flowmatching
 
-本目录是二维 Flow Matching 可视化项目，用来看到“点沿着速度场移动到目标分布”的过程。
+This directory is a 2D Flow Matching visualization project. The point is to directly watch particles move along a learned velocity field toward a target distribution.
 
-包含两个经典分布：
+It includes two classic distributions:
 
-- `ring`：圆环。
-- `moons`：两个半圆。
+- `ring`
+- `moons`
 
-两个入口共用同一套 Flow Matching 系统：
+Both entry points share the same Flow Matching system:
 
-- `distributions.py`：二维目标分布采样。
-- `model.py`：共享的 MLP velocity field。
-- `system.py`：训练、Euler ODE 采样、GIF、风向图保存。
-- `run_ring.py`：圆环入口。
-- `run_moons.py`：双半圆入口。
+- `distributions.py`: target-distribution samplers in 2D
+- `model.py`: shared MLP velocity field
+- `system.py`: training, Euler ODE sampling, GIF rendering, vector-field rendering
+- `run_ring.py`: ring entry point
+- `run_moons.py`: two-moons entry point
 
-## 公式
+## Equations
 
-训练目标：
+Training objective:
 
 ```text
 x0 ~ N(0, I)
@@ -28,13 +28,13 @@ v_target = x1 - x0
 loss = MSE(v_theta(xt, t), v_target)
 ```
 
-采样：
+Sampling:
 
 ```text
 dx / dt = v_theta(x, t)
 ```
 
-## 圆环
+## Ring
 
 ```bash
 python vis-2d-flowmatching/run_ring.py \
@@ -48,7 +48,7 @@ python vis-2d-flowmatching/run_ring.py \
   --seed 42
 ```
 
-输出：
+Outputs:
 
 ```text
 vis-2d-flowmatching/runs/ring/ring_flow.gif
@@ -57,7 +57,7 @@ vis-2d-flowmatching/runs/ring/metrics.jpg
 vis-2d-flowmatching/runs/ring/best.pt
 ```
 
-## 双半圆
+## Moons
 
 ```bash
 python vis-2d-flowmatching/run_moons.py \
@@ -71,7 +71,7 @@ python vis-2d-flowmatching/run_moons.py \
   --seed 42
 ```
 
-输出：
+Outputs:
 
 ```text
 vis-2d-flowmatching/runs/moons/moons_flow.gif
@@ -80,29 +80,41 @@ vis-2d-flowmatching/runs/moons/metrics.jpg
 vis-2d-flowmatching/runs/moons/best.pt
 ```
 
-## 可视化
+## Visualization
 
-- `*_flow.gif`：点从高斯噪声移动到目标分布的全过程。
-- `*_vector_field.jpg`：`t=0.0`、`t=0.5`、`t=1.0` 三个时间点的速度场风向图。
-- `metrics.jpg`：训练 loss 曲线，覆盖式保存，图中文字全部为英文。
+- `*_flow.gif`: the full process of particles moving from Gaussian noise to the target distribution
+- `*_vector_field.jpg`: velocity-field snapshots at `t=0.0`, `t=0.5`, and `t=1.0`
+- `metrics.jpg`: training loss curve, overwritten in place, with all figure text kept in English
 
 ### Ring
 
+Ring sampling animation: 2D points start from Gaussian noise and gradually move along the learned velocity field toward a ring distribution.
+
 ![Ring Flow](runs/ring/ring_flow.gif)
 
+Ring vector field: shows the direction and overall flow structure of the 2D velocity field at `t=0.0`, `t=0.5`, and `t=1.0`.
+
 ![Ring Vector Field](runs/ring/ring_vector_field.jpg)
+
+Ring training curve: used to judge whether optimization on the ring experiment is converging and whether the loss has reached a stable regime.
 
 ![Ring Metrics](runs/ring/metrics.jpg)
 
 ### Moons
 
+Moons sampling animation: 2D points gradually flow from Gaussian noise into the target two-moons distribution.
+
 ![Moons Flow](runs/moons/moons_flow.gif)
+
+Moons vector field: shows the velocity-field structure of the two-moons experiment at different time slices.
 
 ![Moons Vector Field](runs/moons/moons_vector_field.jpg)
 
+Moons training curve: used to inspect the loss trend and final convergence stability of the two-moons experiment.
+
 ![Moons Metrics](runs/moons/metrics.jpg)
 
-如果已经训练过，只想从 checkpoint 重新生成 GIF 和风向图，可以跳过训练：
+If training has already finished and you only want to regenerate the GIF and vector-field plots from a checkpoint, you can skip training:
 
 ```bash
 python vis-2d-flowmatching/run_ring.py \
@@ -115,4 +127,4 @@ python vis-2d-flowmatching/run_ring.py \
   --seed 42
 ```
 
-展示用的 GIF 和 JPG 会提交到 git；checkpoint、CSV 和 config 仍然不提交。
+The demo GIF and JPG are committed to git. Checkpoints, CSV files, and config files are still ignored.
