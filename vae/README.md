@@ -118,6 +118,8 @@ python vae/train_vae.py \
   --image-size 128 \
   --batch-size 64 \
   --epochs 50 \
+  --patience 8 \
+  --min-delta 1e-4 \
   --checkpoint-every-epochs 5 \
   --max-epoch-checkpoints 10
 ```
@@ -134,11 +136,13 @@ python vae/train_vae.py \
   --epochs 50 \
   --dataset-fraction 0.1 \
   --seed 42 \
+  --patience 3 \
+  --min-delta 1e-4 \
   --checkpoint-every-epochs 5 \
   --max-epoch-checkpoints 10
 ```
 
-说明：`--dataset-fraction 0.1` 会在完成坏图扫描后，从 valid 图片中按 `--seed 42` 固定随机抽样 `10%`。默认值是 `1.0`，也就是全量训练。
+说明：`--dataset-fraction 0.1` 会在完成坏图扫描后，从 valid 图片中按 `--seed 42` 固定随机抽样 `10%`。默认值是 `1.0`，也就是全量训练。全量训练命令显式使用 early stopping：`--patience 8 --min-delta 1e-4`；10% 快速验证显式使用 `--patience 3 --min-delta 1e-4`。
 
 路线 B：从 Diffusers `AutoencoderKL` 架构随机初始化，训练自己的 VAE。
 
@@ -150,6 +154,8 @@ python vae/train_vae.py \
   --image-size 128 \
   --batch-size 64 \
   --epochs 50 \
+  --patience 8 \
+  --min-delta 1e-4 \
   --checkpoint-every-epochs 5 \
   --max-epoch-checkpoints 10
 ```

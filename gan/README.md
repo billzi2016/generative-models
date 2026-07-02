@@ -24,9 +24,13 @@ python vae/cache_latents.py
 ```text
 路线 A：dataset/latents/vae_daf_128_finetune.h5
 路线 A：vae/runs/vae_daf_finetune/best_diffusers
+路线 A 10%：dataset/latents/vae_daf_128_finetune_10pct.h5
+路线 A 10%：vae/runs/vae_daf_finetune_10pct/best_diffusers
 
 路线 B：dataset/latents/vae_daf_128_from_scratch.h5
 路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
+路线 B 10%：dataset/latents/vae_daf_128_from_scratch_10pct.h5
+路线 B 10%：vae/runs/vae_daf_from_scratch_10pct/best_diffusers
 ```
 
 ## 路线 A：基于预训练 VAE 微调
@@ -48,6 +52,25 @@ python gan/sample.py \
   --image-format jpg
 ```
 
+## 路线 A 10%：基于 10% 快速 VAE 微调
+
+```bash
+# 训练 latent GAN，读取路线 A 10% 快速 VAE 的 latent 缓存。
+python gan/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
+  --output-dir gan/runs/latent_gan_finetune_10pct \
+  --batch-size 128 \
+  --epochs 100
+
+# 生成 128 张 jpg 图片，使用路线 A 10% 快速 VAE decoder。
+python gan/sample.py \
+  --checkpoint gan/runs/latent_gan_finetune_10pct/best.pt \
+  --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
+  --num-images 128 \
+  --output-dir gan/runs/latent_gan_finetune_10pct/samples_jpg \
+  --image-format jpg
+```
+
 ## 路线 B：从零训练 VAE
 
 ```bash
@@ -64,6 +87,25 @@ python gan/sample.py \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
   --num-images 128 \
   --output-dir gan/runs/latent_gan_from_scratch/samples_jpg \
+  --image-format jpg
+```
+
+## 路线 B 10%：基于 10% 快速从零 VAE
+
+```bash
+# 训练 latent GAN，读取路线 B 10% 快速 VAE 的 latent 缓存。
+python gan/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
+  --output-dir gan/runs/latent_gan_from_scratch_10pct \
+  --batch-size 128 \
+  --epochs 100
+
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE decoder。
+python gan/sample.py \
+  --checkpoint gan/runs/latent_gan_from_scratch_10pct/best.pt \
+  --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
+  --num-images 128 \
+  --output-dir gan/runs/latent_gan_from_scratch_10pct/samples_jpg \
   --image-format jpg
 ```
 

@@ -16,9 +16,13 @@ python vae/cache_latents.py
 ```text
 路线 A：dataset/latents/vae_daf_128_finetune.h5
 路线 A：vae/runs/vae_daf_finetune/best_diffusers
+路线 A 10%：dataset/latents/vae_daf_128_finetune_10pct.h5
+路线 A 10%：vae/runs/vae_daf_finetune_10pct/best_diffusers
 
 路线 B：dataset/latents/vae_daf_128_from_scratch.h5
 路线 B：vae/runs/vae_daf_from_scratch/best_diffusers
+路线 B 10%：dataset/latents/vae_daf_128_from_scratch_10pct.h5
+路线 B 10%：vae/runs/vae_daf_from_scratch_10pct/best_diffusers
 ```
 
 ## 路线 A：基于预训练 VAE 微调
@@ -40,6 +44,25 @@ python dit/sample.py \
   --image-format jpg
 ```
 
+## 路线 A 10%：基于 10% 快速 VAE 微调
+
+```bash
+# 训练 DiT，读取路线 A 10% 快速 VAE 的 latent 缓存。
+python dit/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_finetune_10pct.h5 \
+  --output-dir dit/runs/latent_dit_finetune_10pct \
+  --batch-size 128 \
+  --epochs 100
+
+# 生成 128 张 jpg 图片，使用路线 A 10% 快速 VAE decoder。
+python dit/sample.py \
+  --model-dir dit/runs/latent_dit_finetune_10pct/best_model \
+  --vae-dir vae/runs/vae_daf_finetune_10pct/best_diffusers \
+  --num-images 128 \
+  --output-dir dit/runs/latent_dit_finetune_10pct/samples_jpg \
+  --image-format jpg
+```
+
 ## 路线 B：从零训练 VAE
 
 ```bash
@@ -56,6 +79,25 @@ python dit/sample.py \
   --vae-dir vae/runs/vae_daf_from_scratch/best_diffusers \
   --num-images 128 \
   --output-dir dit/runs/latent_dit_from_scratch/samples_jpg \
+  --image-format jpg
+```
+
+## 路线 B 10%：基于 10% 快速从零 VAE
+
+```bash
+# 训练 DiT，读取路线 B 10% 快速 VAE 的 latent 缓存。
+python dit/train.py \
+  --latents-h5 dataset/latents/vae_daf_128_from_scratch_10pct.h5 \
+  --output-dir dit/runs/latent_dit_from_scratch_10pct \
+  --batch-size 128 \
+  --epochs 100
+
+# 生成 128 张 jpg 图片，使用路线 B 10% 快速 VAE decoder。
+python dit/sample.py \
+  --model-dir dit/runs/latent_dit_from_scratch_10pct/best_model \
+  --vae-dir vae/runs/vae_daf_from_scratch_10pct/best_diffusers \
+  --num-images 128 \
+  --output-dir dit/runs/latent_dit_from_scratch_10pct/samples_jpg \
   --image-format jpg
 ```
 
